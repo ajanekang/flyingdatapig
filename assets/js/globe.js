@@ -18,6 +18,13 @@
     let selectedFeature = null;
     let allLabels = [];
     let currentAltitude = 1.9;
+    let countryFeatures = [];
+    let urbanFeatures = [];
+    let urbanLoadStarted = false;
+
+    function applyPolygons() {
+        world.polygonsData(countryFeatures.concat(urbanFeatures));
+    }
 
     const infoPanel  = document.getElementById('info-panel');
     const legendEl   = document.getElementById('legend-items');
@@ -49,8 +56,19 @@
         .atmosphereAltitude(0.18)
         .polygonCapColor(() => 'rgba(0, 0, 0, 0)')
         .polygonSideColor(() => 'rgba(0, 0, 0, 0)')
-        .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.28)')
+        .polygonStrokeColor((d) =>
+            d && d._layer === 'urban'
+                ? 'rgba(255, 255, 255, 0.16)'
+                : 'rgba(255, 255, 255, 0.28)'
+        )
         .polygonAltitude(0.005)
+        .pathPoints((d) => d.geometry.coordinates)
+        .pathPointLat((p) => p[1])
+        .pathPointLng((p) => p[0])
+        .pathPointAlt(0.005)
+        .pathColor(() => ['rgba(255, 255, 255, 0.18)'])
+        .pathStroke(0.4)
+        .pathTransitionDuration(0)
         .labelsData([])
         .labelLat((d) => d.lat)
         .labelLng((d) => d.lng)
@@ -116,7 +134,8 @@
                 const features = (fc.features || []).filter(
                     (f) => f.properties && f.properties.name !== 'Antarctica'
                 );
-                world.polygonsData(features);
+                countryFeatures = features.map((f) => ({ ...f, _layer: 'country' }));
+                applyPolygons();
 
                 features.forEach((f) => {
                     const [lng, lat] = bboxCenter(f);
@@ -134,6 +153,35 @@
                 world.labelsData(visibleLabelsForAltitude(currentAltitude));
             })
             .catch((err) => console.warn('Country borders unavailable:', err));
+    }
+
+    // State / province borders (Natural Earth admin_1 lines @ 110m, ~117KB,
+    // 109 LineStrings). Rendered via Globe.gl paths so they hug the surface.
+    fetch('https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector/geojson/ne_110m_admin_1_states_provinces_lines.geojson')
+        .then((r) => r.json())
+        .then((geo) => {
+            const lines = (geo.features || []).filter(
+                (f) => f.geometry && f.geometry.type === 'LineString'
+            );
+            world.pathsData(lines);
+        })
+        .catch((err) => console.warn('State borders unavailable:', err));
+
+    // Urban-area "city borders" (Natural Earth ne_50m_urban_areas, ~1.2MB,
+    // ~3500 polygons). Heavy enough that we defer until the user zooms in.
+    function ensureUrbanLoaded() {
+        if (urbanLoadStarted) return;
+        urbanLoadStarted = true;
+        fetch('https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector/geojson/ne_50m_urban_areas.geojson')
+            .then((r) => r.json())
+            .then((geo) => {
+                urbanFeatures = (geo.features || []).map((f) => ({ ...f, _layer: 'urban' }));
+                applyPolygons();
+            })
+            .catch((err) => {
+                console.warn('Urban borders unavailable:', err);
+                urbanLoadStarted = false;
+            });
     }
 
     // Major cities (~243 entries, ~50KB) from Natural Earth via jsDelivr.
@@ -166,6 +214,7 @@
     let zoomRaf = null;
     world.onZoom((pov) => {
         currentAltitude = pov.altitude;
+        if (currentAltitude < 1.5) ensureUrbanLoaded();
         if (zoomRaf !== null) return;
         zoomRaf = requestAnimationFrame(() => {
             zoomRaf = null;
