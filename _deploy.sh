@@ -57,4 +57,11 @@ else
 	git pull
 fi
 
+# Pre-populate the data cache so the first visitor doesn't wait ~45s on
+# Overpass. Falls through harmlessly if the refresh fails; api/data.php
+# will then bootstrap inline on the first request.
+if [ -x bin/refresh.sh ]; then
+	./bin/refresh.sh || echo "Cache refresh failed; api/data.php will bootstrap inline on first request."
+fi
+
 echo
