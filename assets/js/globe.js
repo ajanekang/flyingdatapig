@@ -21,9 +21,19 @@
     let countryFeatures = [];
     let urbanFeatures = [];
     let urbanLoadStarted = false;
+    let urbanVisible = false;
+
+    // Urban polygons (~3500 features) are only included in polygonsData when
+    // we're zoomed in close. Rendering them at world view tanked frame rate
+    // because Globe.gl draws every polygon every frame regardless of whether
+    // it's actually on screen.
+    const URBAN_VISIBLE_BELOW_ALT = 1.0;
 
     function applyPolygons() {
-        world.polygonsData(countryFeatures.concat(urbanFeatures));
+        const polys = urbanVisible
+            ? countryFeatures.concat(urbanFeatures)
+            : countryFeatures;
+        world.polygonsData(polys);
     }
 
     const infoPanel  = document.getElementById('info-panel');
@@ -176,7 +186,8 @@
             .then((r) => r.json())
             .then((geo) => {
                 urbanFeatures = (geo.features || []).map((f) => ({ ...f, _layer: 'urban' }));
-                applyPolygons();
+                // Only re-apply if we're currently at a zoom that shows urban polygons.
+                if (urbanVisible) applyPolygons();
             })
             .catch((err) => {
                 console.warn('Urban borders unavailable:', err);
@@ -214,7 +225,14 @@
     let zoomRaf = null;
     world.onZoom((pov) => {
         currentAltitude = pov.altitude;
-        if (currentAltitude < 1.5) ensureUrbanLoaded();
+
+        const wantUrban = currentAltitude < URBAN_VISIBLE_BELOW_ALT;
+        if (wantUrban) ensureUrbanLoaded();
+        if (wantUrban !== urbanVisible) {
+            urbanVisible = wantUrban;
+            applyPolygons();
+        }
+
         if (zoomRaf !== null) return;
         zoomRaf = requestAnimationFrame(() => {
             zoomRaf = null;
