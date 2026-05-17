@@ -48,7 +48,7 @@
         .atmosphereColor('#3a8bd4')
         .atmosphereAltitude(0.18)
         .pointAltitude(0.004)
-        .pointRadius(0.14)
+        .pointRadius(radiusForAltitude(1.9))
         .pointColor((d) => colorForType(d.properties && d.properties.social_facility))
         .pointLat((d) => d.geometry.coordinates[1])
         .pointLng((d) => d.geometry.coordinates[0])
@@ -72,6 +72,19 @@
 
     const HOME_VIEW = { lat: 40.0, lng: -98.0, altitude: 1.9 };
     world.pointOfView(HOME_VIEW);
+
+    // Keep point markers legible across zoom levels: scale radius with the
+    // camera altitude (small dots when close, larger when far). Throttled to
+    // one update per animation frame so a flick of the scroll wheel can't
+    // queue dozens of re-renders.
+    let zoomRaf = null;
+    world.onZoom((pov) => {
+        if (zoomRaf !== null) return;
+        zoomRaf = requestAnimationFrame(() => {
+            zoomRaf = null;
+            world.pointRadius(radiusForAltitude(pov.altitude));
+        });
+    });
 
     if (resetEl) {
         resetEl.addEventListener('click', () => {
@@ -264,6 +277,14 @@
 
     function colorForType(t) {
         return TYPE_COLORS[t] || DEFAULT_COLOR;
+    }
+
+    // Linear scale clamped to a sensible range. Globe.gl point radius is in
+    // units of globe radius (~100), so 0.04 reads as a tiny dot and 0.3 reads
+    // as a chunky marker. At the home altitude (~1.9) this gives ~0.14, which
+    // matches the previous fixed radius.
+    function radiusForAltitude(alt) {
+        return Math.max(0.04, Math.min(0.3, alt * 0.075));
     }
 
     // Pick black or white text for a given hex background based on luminance.
