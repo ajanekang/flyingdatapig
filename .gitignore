@@ -1,0 +1,3 @@
+# Cached data — refreshed weekly via bin/refresh_data.php; not source of truth.
+data/cache/*
+!data/cache/.gitkeep
