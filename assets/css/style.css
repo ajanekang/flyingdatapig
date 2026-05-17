@@ -514,6 +514,56 @@ button { font: inherit; cursor: pointer; }
     pointer-events: none;
 }
 
+.globe-tooltip-rich {
+    max-width: 340px;
+    padding: 0.85rem 1rem;
+    background: rgba(15, 15, 35, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    line-height: 1.5;
+}
+
+.globe-tooltip-rich .tt-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+    color: #fff;
+}
+
+.globe-tooltip-rich .tt-badge {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-bottom: 0.65rem;
+    letter-spacing: 0.02em;
+}
+
+.globe-tooltip-rich .tt-grid {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.25rem 0.6rem;
+    margin: 0;
+    font-size: 0.75rem;
+}
+
+.globe-tooltip-rich .tt-grid dt {
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.65rem;
+    align-self: start;
+    padding-top: 0.1rem;
+}
+
+.globe-tooltip-rich .tt-grid dd {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.9);
+    word-break: break-word;
+}
+
 .globe-error {
     color: #f87171;
     padding: 1rem;

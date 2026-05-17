@@ -101,8 +101,27 @@
             const p = d.properties || {};
             const name = p.name || p['name:en'] || 'Unnamed';
             const prop = currentSource().group_property;
-            const kind = (((prop && p[prop]) || p.amenity) || '').replace(/_/g, ' ');
-            return `<div class="globe-tooltip"><b>${escapeHtml(name)}</b>${kind ? '<br>' + escapeHtml(capitalize(kind)) : ''}</div>`;
+            const typeRaw = (prop && p[prop]) || p.amenity || '';
+            const typeLabel = typeRaw ? capitalize(typeRaw.replace(/_/g, ' ')) : '';
+            const typeColor = colorForType(typeRaw);
+            const address = formatAddress(p);
+
+            const rows = [
+                address           ? ['Address',  address]            : null,
+                p.opening_hours   ? ['Hours',    p.opening_hours]    : null,
+                p.phone           ? ['Phone',    p.phone]            : null,
+                p.website         ? ['Website',  p.website]          : null,
+                p.email           ? ['Email',    p.email]            : null,
+                p.operator        ? ['Operator', p.operator]         : null,
+                p.wheelchair      ? ['Access',   p.wheelchair]       : null,
+            ].filter(Boolean);
+
+            return `
+                <div class="globe-tooltip globe-tooltip-rich">
+                    <div class="tt-name">${escapeHtml(name)}</div>
+                    ${typeLabel ? `<div class="tt-badge" style="background:${typeColor};color:${onColor(typeColor)}">${escapeHtml(typeLabel)}</div>` : ''}
+                    ${rows.length ? `<dl class="tt-grid">${rows.map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('')}</dl>` : ''}
+                </div>`;
         })
         .onPointClick((d) => {
             selectedFeature = d;
