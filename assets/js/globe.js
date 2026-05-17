@@ -196,6 +196,29 @@
         })
         .catch((err) => console.warn('State borders unavailable:', err));
 
+    // North American state / province labels — curated centroids served from
+    // data/static/na-states.json. ~70 entries; we don't have a small enough
+    // global admin_1 label dataset to load on every page.
+    fetch('data/static/na-states.json')
+        .then((r) => r.json())
+        .then((states) => {
+            (states || []).forEach((s) => {
+                allLabels.push({
+                    name:  s.name,
+                    lat:   s.lat,
+                    lng:   s.lng,
+                    size:  0.32,
+                    dot:   0,
+                    color: 'rgba(255, 255, 255, 0.45)',
+                    type:  'state',
+                    minAlt: 0.4,
+                    maxAlt: 1.2,
+                });
+            });
+            world.labelsData(visibleLabelsForAltitude(currentAltitude));
+        })
+        .catch((err) => console.warn('State labels unavailable:', err));
+
     // Major cities (~243 entries, ~50KB) from Natural Earth via jsDelivr.
     fetch('https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector/geojson/ne_110m_populated_places_simple.geojson')
         .then((r) => r.json())
