@@ -16,6 +16,8 @@
     let visibleTypes = new Set();
     let searchQuery = '';
     let selectedFeature = null;
+    let allLabels = [];
+    let currentAltitude = 1.9;
 
     const infoPanel  = document.getElementById('info-panel');
     const legendEl   = document.getElementById('legend-items');
@@ -49,7 +51,16 @@
         .polygonSideColor(() => 'rgba(0, 0, 0, 0)')
         .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.28)')
         .polygonAltitude(0.005)
-        .pointAltitude(0.004)
+        .labelsData([])
+        .labelLat((d) => d.lat)
+        .labelLng((d) => d.lng)
+        .labelText((d) => d.name)
+        .labelSize((d) => d.size)
+        .labelDotRadius((d) => d.dot)
+        .labelColor((d) => d.color)
+        .labelAltitude(0.01)
+        .labelResolution(2)
+        .pointAltitude(0)
         .pointRadius(radiusForAltitude(1.9))
         .pointColor((d) => colorForType(d.properties && d.properties.social_facility))
         .pointLat((d) => d.geometry.coordinates[1])
@@ -91,6 +102,7 @@
 
     // Country outlines layered on top. Loaded from world-atlas TopoJSON
     // (~100KB) and converted to GeoJSON in the browser via topojson-client.
+    // Country labels reuse the same dataset (centroid via bbox center).
     if (typeof topojson !== 'undefined') {
         fetch('https://unpkg.com/world-atlas@2/countries-110m.json')
             .then((r) => r.json())
@@ -100,20 +112,60 @@
                     (f) => f.properties && f.properties.name !== 'Antarctica'
                 );
                 world.polygonsData(features);
+
+                features.forEach((f) => {
+                    const [lng, lat] = bboxCenter(f);
+                    allLabels.push({
+                        name:  f.properties.name,
+                        lat, lng,
+                        size:  0.42,
+                        dot:   0,
+                        color: 'rgba(255, 255, 255, 0.55)',
+                        type:  'country',
+                        minAlt: 0.55,
+                        maxAlt: 999,
+                    });
+                });
+                world.labelsData(visibleLabelsForAltitude(currentAltitude));
             })
             .catch((err) => console.warn('Country borders unavailable:', err));
     }
 
+    // Major cities (~243 entries, ~50KB) from Natural Earth via jsDelivr.
+    fetch('https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector/geojson/ne_110m_populated_places_simple.geojson')
+        .then((r) => r.json())
+        .then((geo) => {
+            (geo.features || []).forEach((f) => {
+                if (!f.geometry || !Array.isArray(f.geometry.coordinates)) return;
+                const [lng, lat] = f.geometry.coordinates;
+                allLabels.push({
+                    name:  f.properties.name,
+                    lat, lng,
+                    size:  0.3,
+                    dot:   0.18,
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    type:  'city',
+                    minAlt: 0,
+                    maxAlt: 1.5,
+                });
+            });
+            world.labelsData(visibleLabelsForAltitude(currentAltitude));
+        })
+        .catch((err) => console.warn('City labels unavailable:', err));
+
     // Keep point markers legible across zoom levels: scale radius with the
     // camera altitude (small dots when close, larger when far). Throttled to
     // one update per animation frame so a flick of the scroll wheel can't
-    // queue dozens of re-renders.
+    // queue dozens of re-renders. Also re-filters which place labels are
+    // visible at the current altitude.
     let zoomRaf = null;
     world.onZoom((pov) => {
+        currentAltitude = pov.altitude;
         if (zoomRaf !== null) return;
         zoomRaf = requestAnimationFrame(() => {
             zoomRaf = null;
-            world.pointRadius(radiusForAltitude(pov.altitude));
+            world.pointRadius(radiusForAltitude(currentAltitude));
+            world.labelsData(visibleLabelsForAltitude(currentAltitude));
         });
     });
 
@@ -316,6 +368,32 @@
     // matches the previous fixed radius.
     function radiusForAltitude(alt) {
         return Math.max(0.04, Math.min(0.3, alt * 0.075));
+    }
+
+    function visibleLabelsForAltitude(alt) {
+        return allLabels.filter((l) => alt >= l.minAlt && alt <= l.maxAlt);
+    }
+
+    // Approximate label point for a country: center of its bounding box.
+    // Imperfect for countries spanning the antimeridian (Russia, Fiji) but
+    // good enough for the label positioning we need.
+    function bboxCenter(feature) {
+        let minLng = Infinity, maxLng = -Infinity;
+        let minLat = Infinity, maxLat = -Infinity;
+        function walk(g) {
+            if (typeof g[0] === 'number') {
+                if (g[0] < minLng) minLng = g[0];
+                if (g[0] > maxLng) maxLng = g[0];
+                if (g[1] < minLat) minLat = g[1];
+                if (g[1] > maxLat) maxLat = g[1];
+            } else {
+                g.forEach(walk);
+            }
+        }
+        if (feature.geometry && Array.isArray(feature.geometry.coordinates)) {
+            walk(feature.geometry.coordinates);
+        }
+        return [(minLng + maxLng) / 2, (minLat + maxLat) / 2];
     }
 
     // Pick black or white text for a given hex background based on luminance.
