@@ -113,6 +113,7 @@ $team    = require __DIR__ . '/includes/team.php';
 
     <script src="assets/js/main.js"></script>
     <script src="https://unpkg.com/globe.gl"></script>
+    <script src="https://unpkg.com/topojson-client@3"></script>
     <script src="assets/js/globe.js" defer></script>
 </body>
 </html>

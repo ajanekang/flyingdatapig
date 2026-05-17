@@ -41,12 +41,14 @@
     });
 
     const world = Globe()(container)
-        .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
-        .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
         .backgroundColor('rgba(0,0,0,0)')
         .showAtmosphere(true)
         .atmosphereColor('#3a8bd4')
         .atmosphereAltitude(0.18)
+        .polygonCapColor(() => 'rgba(0, 0, 0, 0)')
+        .polygonSideColor(() => 'rgba(0, 0, 0, 0)')
+        .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.28)')
+        .polygonAltitude(0.005)
         .pointAltitude(0.004)
         .pointRadius(radiusForAltitude(1.9))
         .pointColor((d) => colorForType(d.properties && d.properties.social_facility))
@@ -72,6 +74,35 @@
 
     const HOME_VIEW = { lat: 40.0, lng: -98.0, altitude: 1.9 };
     world.pointOfView(HOME_VIEW);
+
+    // Stylized solid globe: mutate the default material so the sphere reads as
+    // a deep blue object rather than the default white. The atmosphere shader
+    // above gives the rim glow.
+    const globeMat = world.globeMaterial();
+    if (globeMat) {
+        globeMat.color.set('#1e5a8a');
+        if (globeMat.emissive) globeMat.emissive.set('#0d3b66');
+        if ('emissiveIntensity' in globeMat) globeMat.emissiveIntensity = 0.5;
+        if ('shininess' in globeMat) globeMat.shininess = 25;
+        globeMat.transparent = false;
+        globeMat.opacity = 1;
+        globeMat.needsUpdate = true;
+    }
+
+    // Country outlines layered on top. Loaded from world-atlas TopoJSON
+    // (~100KB) and converted to GeoJSON in the browser via topojson-client.
+    if (typeof topojson !== 'undefined') {
+        fetch('https://unpkg.com/world-atlas@2/countries-110m.json')
+            .then((r) => r.json())
+            .then((topo) => {
+                const fc = topojson.feature(topo, topo.objects.countries);
+                const features = (fc.features || []).filter(
+                    (f) => f.properties && f.properties.name !== 'Antarctica'
+                );
+                world.polygonsData(features);
+            })
+            .catch((err) => console.warn('Country borders unavailable:', err));
+    }
 
     // Keep point markers legible across zoom levels: scale radius with the
     // camera altitude (small dots when close, larger when far). Throttled to
