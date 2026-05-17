@@ -34,19 +34,49 @@ foreach ($sources as $id => $s) {
         working without the external sheet.
     -->
     <style>
+        /* Aggressive layout fallback: anchor the side panel to the viewport
+           with position:fixed so it appears even if every other CSS rule
+           fails to load. !important defends against any conflicting
+           external rules that load after this. */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a1a; color: #e0e0e0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-        .map-app { width: 100%; height: 100%; display: flex; flex-direction: column; background: #0a0a1a; }
-        .globe-area { flex: 1; position: relative; min-height: 50vh; background: #05060f; }
+        html, body {
+            width: 100%; height: 100%; overflow: hidden;
+            background: #0a0a1a; color: #e0e0e0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        .map-app { width: 100vw; height: 100vh; position: relative; background: #0a0a1a; }
+        .globe-area {
+            position: absolute; top: 0; left: 0;
+            right: 0; bottom: 50vh;
+            background: #05060f;
+        }
         #globe { width: 100%; height: 100%; }
-        .side-panel { width: 100%; max-height: 50vh; background: rgba(15, 15, 35, 0.92); border-top: 1px solid rgba(255, 255, 255, 0.05); overflow-y: auto; display: flex; flex-direction: column; }
+        .side-panel {
+            position: fixed !important;
+            top: 50vh !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            background: rgba(15, 15, 35, 0.96) !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+            overflow-y: auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            z-index: 10 !important;
+        }
         @media (min-width: 768px) {
-            .map-app { flex-direction: row; }
-            .globe-area { min-height: 100%; }
-            .side-panel { width: 340px; max-height: 100%; border-top: 0; border-left: 1px solid rgba(255, 255, 255, 0.05); }
+            .globe-area { right: 340px; bottom: 0; }
+            .side-panel {
+                top: 0 !important;
+                left: auto !important;
+                width: 340px !important;
+                border-top: 0 !important;
+                border-left: 1px solid rgba(255, 255, 255, 0.05) !important;
+            }
         }
         @media (min-width: 1024px) {
-            .side-panel { width: 380px; }
+            .globe-area { right: 380px; }
+            .side-panel { width: 380px !important; }
         }
     </style>
 </head>
