@@ -22,6 +22,23 @@
     const searchEl   = document.getElementById('search');
     const resetEl    = document.getElementById('reset');
     const countEl    = document.getElementById('globe-count');
+    const tabs       = document.querySelectorAll('.tab');
+    const panes      = document.querySelectorAll('.panel-pane');
+
+    function activateTab(name) {
+        tabs.forEach((t) => {
+            const on = t.dataset.tab === name;
+            t.classList.toggle('is-active', on);
+            t.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        panes.forEach((p) => {
+            p.hidden = p.dataset.pane !== name;
+        });
+    }
+
+    tabs.forEach((t) => {
+        t.addEventListener('click', () => activateTab(t.dataset.tab));
+    });
 
     const world = Globe()(container)
         .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
@@ -44,6 +61,7 @@
         .onPointClick((d) => {
             selectedFeature = d;
             renderInfo(d);
+            activateTab('details');
             const [lng, lat] = d.geometry.coordinates;
             world.pointOfView({ lat, lng, altitude: 0.7 }, 900);
         })

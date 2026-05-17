@@ -24,49 +24,89 @@ $team    = require __DIR__ . '/includes/team.php';
             </div>
         </div>
 
-        <aside class="side-panel" aria-label="Detail panel">
-            <div class="panel-section panel-controls">
-                <input
-                    id="search"
-                    type="search"
-                    class="search-input"
-                    placeholder="Search by name or city..."
-                    autocomplete="off">
-                <button id="reset" type="button" class="ghost-btn">Reset view</button>
-            </div>
+        <aside class="side-panel" aria-label="Side panel">
+            <nav class="tab-bar" role="tablist">
+                <button class="tab is-active" data-tab="details" type="button" role="tab" aria-selected="true">Details</button>
+                <button class="tab" data-tab="data" type="button" role="tab" aria-selected="false">Data</button>
+                <button class="tab" data-tab="team" type="button" role="tab" aria-selected="false">Team</button>
+                <button class="tab" data-tab="about" type="button" role="tab" aria-selected="false">About</button>
+            </nav>
 
-            <div class="panel-section panel-legend" id="legend">
-                <h3 class="panel-section-label">Facility types</h3>
-                <div class="legend-items" id="legend-items"></div>
-            </div>
+            <div class="panel-pane" data-pane="details" role="tabpanel">
+                <div class="panel-section panel-controls">
+                    <input
+                        id="search"
+                        type="search"
+                        class="search-input"
+                        placeholder="Search by name or city..."
+                        autocomplete="off">
+                    <button id="reset" type="button" class="ghost-btn">Reset view</button>
+                </div>
 
-            <div class="panel-section panel-info" id="info-panel">
-                <div class="info-empty">
-                    <h2>North America Food Banks</h2>
-                    <p class="info-stats" id="globe-count">Loading…</p>
-                    <p class="info-hint">Click a point on the globe to see details about that location.</p>
+                <div class="panel-section panel-legend" id="legend">
+                    <h3 class="panel-section-label">Facility types</h3>
+                    <div class="legend-items" id="legend-items"></div>
+                </div>
+
+                <div class="panel-section panel-info" id="info-panel">
+                    <div class="info-empty">
+                        <h2>North America Food Banks</h2>
+                        <p class="info-stats" id="globe-count">Loading…</p>
+                        <p class="info-hint">Click a point on the globe to see details about that location.</p>
+                    </div>
                 </div>
             </div>
 
-            <div class="panel-section panel-footer">
-                <?php foreach ($sources as $id => $src): ?>
-                    <p class="panel-source-label">Data source</p>
-                    <p class="panel-source-name"><?= htmlspecialchars($src['label']) ?></p>
-                    <p class="panel-source-attr"><?= htmlspecialchars($src['attribution'] ?? '') ?></p>
-                    <p class="panel-source-links">
-                        <a class="panel-link" href="api/data.php?source=<?= urlencode($id) ?>&amp;download=1">Download GeoJSON</a>
-                        <?php if (!empty($src['source_url'])): ?>
-                            <a class="panel-link" href="<?= htmlspecialchars($src['source_url']) ?>" target="_blank" rel="noopener">Original</a>
-                        <?php endif; ?>
-                    </p>
-                <?php endforeach; ?>
+            <div class="panel-pane" data-pane="data" role="tabpanel" hidden>
+                <div class="panel-section">
+                    <h3 class="panel-section-label">Data sources</h3>
+                    <ul class="source-list">
+                        <?php foreach ($sources as $id => $src): ?>
+                            <li class="source">
+                                <h4 class="source-name"><?= htmlspecialchars($src['label']) ?></h4>
+                                <?php if (!empty($src['description'])): ?>
+                                    <p class="source-description"><?= htmlspecialchars($src['description']) ?></p>
+                                <?php endif; ?>
+                                <p class="source-attribution"><?= htmlspecialchars($src['attribution'] ?? '') ?></p>
+                                <p class="source-actions">
+                                    <a class="panel-btn" href="api/data.php?source=<?= urlencode($id) ?>&amp;download=1">Download GeoJSON</a>
+                                    <a class="panel-link" href="api/data.php?source=<?= urlencode($id) ?>" target="_blank" rel="noopener">View raw</a>
+                                    <?php if (!empty($src['source_url'])): ?>
+                                        <a class="panel-link" href="<?= htmlspecialchars($src['source_url']) ?>" target="_blank" rel="noopener">Original source</a>
+                                    <?php endif; ?>
+                                </p>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            </div>
 
-                <p class="panel-team-label">Team</p>
-                <p class="panel-team">
-                    <?php foreach ($team as $i => $member): ?>
-                        <?= htmlspecialchars($member['name']) ?> <span class="panel-team-role"><?= htmlspecialchars($member['role']) ?></span><?= $i < count($team) - 1 ? '<br>' : '' ?>
-                    <?php endforeach; ?>
-                </p>
+            <div class="panel-pane" data-pane="team" role="tabpanel" hidden>
+                <div class="panel-section">
+                    <h3 class="panel-section-label">Team</h3>
+                    <ul class="team-list">
+                        <?php foreach ($team as $member): ?>
+                            <li class="team-member">
+                                <h4 class="member-name"><?= htmlspecialchars($member['name']) ?></h4>
+                                <p class="member-role"><?= htmlspecialchars($member['role']) ?></p>
+                                <p class="member-affiliation"><?= htmlspecialchars($member['affiliation']) ?></p>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="panel-pane" data-pane="about" role="tabpanel" hidden>
+                <div class="panel-section">
+                    <h3 class="panel-section-label">About</h3>
+                    <p class="about-text">
+                        Flying Data Pig is a non-profit initiative — a platform providing
+                        public data visualization based on Open APIs and JSON data
+                        collected by contributors.
+                    </p>
+                    <p class="about-meta">Established 2024</p>
+                    <p class="about-attribution">Map data &copy; OpenStreetMap contributors (ODbL)</p>
+                </div>
             </div>
         </aside>
     </div>
