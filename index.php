@@ -25,6 +25,30 @@ foreach ($sources as $id => $s) {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
+    <!--
+        Critical layout fallback. If assets/css/style.css fails to load
+        (e.g. a production rewrite rule routes everything to index.php,
+        or the file is served with the wrong MIME type), the side panel
+        would otherwise block-flow below the globe and be clipped by the
+        overflow:hidden on body. These rules keep the split layout
+        working without the external sheet.
+    -->
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a1a; color: #e0e0e0; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .map-app { width: 100%; height: 100%; display: flex; flex-direction: column; background: #0a0a1a; }
+        .globe-area { flex: 1; position: relative; min-height: 50vh; background: #05060f; }
+        #globe { width: 100%; height: 100%; }
+        .side-panel { width: 100%; max-height: 50vh; background: rgba(15, 15, 35, 0.92); border-top: 1px solid rgba(255, 255, 255, 0.05); overflow-y: auto; display: flex; flex-direction: column; }
+        @media (min-width: 768px) {
+            .map-app { flex-direction: row; }
+            .globe-area { min-height: 100%; }
+            .side-panel { width: 340px; max-height: 100%; border-top: 0; border-left: 1px solid rgba(255, 255, 255, 0.05); }
+        }
+        @media (min-width: 1024px) {
+            .side-panel { width: 380px; }
+        }
+    </style>
 </head>
 <body>
     <div class="map-app">
