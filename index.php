@@ -44,11 +44,14 @@ foreach ($sources as $id => $s) {
             background: #0a0a1a; color: #e0e0e0;
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
-        .map-app { width: 100vw; height: 100vh; position: relative; background: #0a0a1a; }
+        .map-app { width: 100vw !important; height: 100vh !important; position: relative !important; background: #0a0a1a !important; display: block !important; }
         .globe-area {
-            position: absolute; top: 0; left: 0;
-            right: 0; bottom: 50vh;
-            background: #05060f;
+            position: absolute !important;
+            top: 0 !important; left: 0 !important;
+            right: 0 !important; bottom: 50vh !important;
+            background: #05060f !important;
+            flex: none !important;
+            min-height: 0 !important;
         }
         #globe { width: 100%; height: 100%; }
         .side-panel {
@@ -65,7 +68,7 @@ foreach ($sources as $id => $s) {
             z-index: 10 !important;
         }
         @media (min-width: 768px) {
-            .globe-area { right: 340px; bottom: 0; }
+            .globe-area { right: 340px !important; bottom: 0 !important; }
             .side-panel {
                 top: 0 !important;
                 left: auto !important;
@@ -75,7 +78,7 @@ foreach ($sources as $id => $s) {
             }
         }
         @media (min-width: 1024px) {
-            .globe-area { right: 380px; }
+            .globe-area { right: 380px !important; }
             .side-panel { width: 380px !important; }
         }
     </style>
