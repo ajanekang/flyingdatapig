@@ -19,21 +19,9 @@
     let allLabels = [];
     let currentAltitude = 1.9;
     let countryFeatures = [];
-    let urbanFeatures = [];
-    let urbanLoadStarted = false;
-    let urbanVisible = false;
-
-    // Urban polygons (~3500 features) are only included in polygonsData when
-    // we're zoomed in close. Rendering them at world view tanked frame rate
-    // because Globe.gl draws every polygon every frame regardless of whether
-    // it's actually on screen.
-    const URBAN_VISIBLE_BELOW_ALT = 1.0;
 
     function applyPolygons() {
-        const polys = urbanVisible
-            ? countryFeatures.concat(urbanFeatures)
-            : countryFeatures;
-        world.polygonsData(polys);
+        world.polygonsData(countryFeatures);
     }
 
     const infoPanel  = document.getElementById('info-panel');
@@ -66,11 +54,7 @@
         .atmosphereAltitude(0.18)
         .polygonCapColor(() => 'rgba(0, 0, 0, 0)')
         .polygonSideColor(() => 'rgba(0, 0, 0, 0)')
-        .polygonStrokeColor((d) =>
-            d && d._layer === 'urban'
-                ? 'rgba(255, 255, 255, 0.16)'
-                : 'rgba(255, 255, 255, 0.28)'
-        )
+        .polygonStrokeColor(() => 'rgba(255, 255, 255, 0.28)')
         .polygonAltitude(0.005)
         .pathPoints((d) => d.geometry.coordinates)
         .pathPointLat((p) => p[1])
@@ -147,10 +131,25 @@
                 countryFeatures = features.map((f) => ({ ...f, _layer: 'country' }));
                 applyPolygons();
 
-                features.forEach((f) => {
-                    const [lng, lat] = bboxCenter(f);
+                // Label only the ~40 largest countries (by bbox area) so the
+                // world view doesn't draw 170 separate text meshes per frame.
+                // Below altitude 0.55 the country layer hides anyway.
+                const ranked = features
+                    .map((f) => {
+                        const bb = bboxOf(f);
+                        return {
+                            feature: f,
+                            lng: (bb.minLng + bb.maxLng) / 2,
+                            lat: (bb.minLat + bb.maxLat) / 2,
+                            area: (bb.maxLng - bb.minLng) * (bb.maxLat - bb.minLat),
+                        };
+                    })
+                    .sort((a, b) => b.area - a.area)
+                    .slice(0, 40);
+
+                ranked.forEach(({ feature, lat, lng }) => {
                     allLabels.push({
-                        name:  f.properties.name,
+                        name:  feature.properties.name,
                         lat, lng,
                         size:  0.42,
                         dot:   0,
@@ -176,24 +175,6 @@
             world.pathsData(lines);
         })
         .catch((err) => console.warn('State borders unavailable:', err));
-
-    // Urban-area "city borders" (Natural Earth ne_50m_urban_areas, ~1.2MB,
-    // ~3500 polygons). Heavy enough that we defer until the user zooms in.
-    function ensureUrbanLoaded() {
-        if (urbanLoadStarted) return;
-        urbanLoadStarted = true;
-        fetch('https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector/geojson/ne_50m_urban_areas.geojson')
-            .then((r) => r.json())
-            .then((geo) => {
-                urbanFeatures = (geo.features || []).map((f) => ({ ...f, _layer: 'urban' }));
-                // Only re-apply if we're currently at a zoom that shows urban polygons.
-                if (urbanVisible) applyPolygons();
-            })
-            .catch((err) => {
-                console.warn('Urban borders unavailable:', err);
-                urbanLoadStarted = false;
-            });
-    }
 
     // Major cities (~243 entries, ~50KB) from Natural Earth via jsDelivr.
     fetch('https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector/geojson/ne_110m_populated_places_simple.geojson')
@@ -225,14 +206,6 @@
     let zoomRaf = null;
     world.onZoom((pov) => {
         currentAltitude = pov.altitude;
-
-        const wantUrban = currentAltitude < URBAN_VISIBLE_BELOW_ALT;
-        if (wantUrban) ensureUrbanLoaded();
-        if (wantUrban !== urbanVisible) {
-            urbanVisible = wantUrban;
-            applyPolygons();
-        }
-
         if (zoomRaf !== null) return;
         zoomRaf = requestAnimationFrame(() => {
             zoomRaf = null;
@@ -446,10 +419,10 @@
         return allLabels.filter((l) => alt >= l.minAlt && alt <= l.maxAlt);
     }
 
-    // Approximate label point for a country: center of its bounding box.
-    // Imperfect for countries spanning the antimeridian (Russia, Fiji) but
-    // good enough for the label positioning we need.
-    function bboxCenter(feature) {
+    // Lon/lat bounding box of a Polygon/MultiPolygon feature. Imperfect for
+    // countries spanning the antimeridian (Russia, Fiji) but good enough for
+    // label placement and a "biggest countries first" ranking.
+    function bboxOf(feature) {
         let minLng = Infinity, maxLng = -Infinity;
         let minLat = Infinity, maxLat = -Infinity;
         function walk(g) {
@@ -465,7 +438,7 @@
         if (feature.geometry && Array.isArray(feature.geometry.coordinates)) {
             walk(feature.geometry.coordinates);
         }
-        return [(minLng + maxLng) / 2, (minLat + maxLat) / 2];
+        return { minLng, maxLng, minLat, maxLat };
     }
 
     // Pick black or white text for a given hex background based on luminance.
