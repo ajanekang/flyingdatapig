@@ -93,6 +93,11 @@ function refresh_source(string $id, array $source): array
     $paths = cache_paths($id);
     @mkdir(dirname($paths['data']), 0775, true);
 
+    // A slow upstream (Overpass can take ~45s) will easily blow past the
+    // default 30s PHP max_execution_time when this runs inline from a web
+    // request. Give it room.
+    @set_time_limit(((int) ($source['timeout'] ?? 60)) + 30);
+
     $meta = read_meta($id) ?? [];
     $request_headers = [];
     if (!empty($meta['etag'])) {
@@ -213,31 +218,43 @@ function osm_to_geojson(string $body): string
     ], JSON_UNESCAPED_SLASHES);
 }
 
-// Lazy refresh: triggered from the API on read. Uses a non-blocking flock so a
-// thundering herd of requests doesn't all fetch — only one wins the lock, the
-// rest serve stale data until that one finishes.
+// Lazy refresh: triggered from the API on read.
+//
+// Three cases:
+//   1. Cache missing entirely → bootstrap inline (blocking flock). The
+//      lazy_refresh flag is bypassed here because we have nothing to serve
+//      otherwise.
+//   2. Cache stale + lazy_refresh != false → non-blocking refresh. Concurrent
+//      requests serve stale data until the one holding the lock finishes.
+//   3. Cache stale + lazy_refresh === false → do nothing; wait for cron.
 function ensure_fresh(string $id, array $source): void
 {
-    if (($source['lazy_refresh'] ?? true) === false) {
+    $paths   = cache_paths($id);
+    $missing = !is_file($paths['data']);
+    $ttl     = (int) ($source['ttl_days'] ?? 7);
+
+    if (!$missing && ($source['lazy_refresh'] ?? true) === false) {
         return;
     }
-    $ttl = (int) ($source['ttl_days'] ?? 7);
-    if (!is_stale($id, $ttl)) {
+    if (!$missing && !is_stale($id, $ttl)) {
         return;
     }
 
-    $paths = cache_paths($id);
     @mkdir(dirname($paths['lock']), 0775, true);
     $lock = @fopen($paths['lock'], 'c');
     if (!$lock) {
         return;
     }
-    if (!flock($lock, LOCK_EX | LOCK_NB)) {
+    // Bootstrap: block so this request waits and serves real data. Stale:
+    // non-blocking so a thundering herd doesn't all fetch.
+    $lock_flags = $missing ? LOCK_EX : (LOCK_EX | LOCK_NB);
+    if (!flock($lock, $lock_flags)) {
         fclose($lock);
         return;
     }
     try {
-        if (is_stale($id, $ttl)) {
+        // Re-check after acquiring lock — another process may have just done it.
+        if (!is_file($paths['data']) || is_stale($id, $ttl)) {
             refresh_source($id, $source);
         }
     } finally {
