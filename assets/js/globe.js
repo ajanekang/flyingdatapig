@@ -60,7 +60,12 @@
         .labelColor((d) => d.color)
         .labelAltitude(0.01)
         .labelResolution(2)
-        .pointAltitude(0)
+        // Tiny but non-zero altitude: visually reads as a flat disc on the
+        // globe surface, but the cylinder still has enough thickness for
+        // Globe.gl's raycaster to register hover and click events. With
+        // altitude exactly 0 the geometry is degenerate and the picker
+        // silently fails.
+        .pointAltitude(0.002)
         .pointRadius(radiusForAltitude(1.9))
         .pointColor((d) => colorForType(d.properties && d.properties.social_facility))
         .pointLat((d) => d.geometry.coordinates[1])
