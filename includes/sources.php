@@ -1,20 +1,31 @@
 <?php
 declare(strict_types=1);
 
-// North America bounding box used in the Overpass query below.
-// south=14, west=-170, north=84, east=-50 — covers Mexico through Alaska / northern Canada.
-$overpass_query = '[out:json][timeout:180];'
+// NA bounding box for food-bank Overpass query.
+// south=14, west=-170, north=84, east=-50 — Mexico through Alaska/northern Canada.
+$food_query = '[out:json][timeout:180];'
     . '('
     . 'node["social_facility"~"food"](14.0,-170.0,84.0,-50.0);'
     . 'way["social_facility"~"food"](14.0,-170.0,84.0,-50.0);'
     . ');'
     . 'out center tags;';
 
+// Universities worldwide. Nodes only (~16k) — including ways would push
+// the dataset to 50k+ features, much of which is just campus-building
+// duplicates of node-tagged universities.
+// `out;` (a.k.a. `out body;`) emits id + lat/lon + tags. `out tags;`
+// strips the coordinates, which the GeoJSON transform requires — so
+// don't use it for node datasets.
+$uni_query = '[out:json][timeout:300];'
+    . 'node["amenity"="university"];'
+    . 'out;';
+
 return [
     'na-food-banks' => [
         'label'        => 'North America Food Banks, Pantries & Soup Kitchens',
         'description'  => 'Food distribution sites across North America — food banks, food pantries, and soup kitchens — from OpenStreetMap.',
-        'url'          => 'https://overpass-api.de/api/interpreter?data=' . rawurlencode($overpass_query),
+        'subtitle'     => 'North America food banks, pantries & soup kitchens',
+        'url'          => 'https://overpass-api.de/api/interpreter?data=' . rawurlencode($food_query),
         'format'       => 'geojson',
         'ttl_days'     => 7,
         'attribution'  => '© OpenStreetMap contributors (ODbL)',
@@ -22,5 +33,22 @@ return [
         'transform'    => 'osm_to_geojson',
         'timeout'      => 240,
         'lazy_refresh' => false,
+        'default_view' => ['lat' => 40.0, 'lng' => -98.0, 'altitude' => 1.9],
+        'group_property' => 'social_facility',
+    ],
+    'global-universities' => [
+        'label'        => 'Global Universities',
+        'description'  => 'Universities and colleges worldwide, tagged amenity=university on OpenStreetMap.',
+        'subtitle'     => 'Universities worldwide',
+        'url'          => 'https://overpass-api.de/api/interpreter?data=' . rawurlencode($uni_query),
+        'format'       => 'geojson',
+        'ttl_days'     => 30,
+        'attribution'  => '© OpenStreetMap contributors (ODbL)',
+        'source_url'   => 'https://www.openstreetmap.org/about',
+        'transform'    => 'osm_to_geojson',
+        'timeout'      => 360,
+        'lazy_refresh' => false,
+        'default_view' => ['lat' => 20.0, 'lng' => 10.0, 'altitude' => 2.4],
+        'group_property' => null,
     ],
 ];

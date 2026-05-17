@@ -1,6 +1,18 @@
 <?php
 $sources = require __DIR__ . '/includes/sources.php';
 $team    = require __DIR__ . '/includes/team.php';
+
+// Slim metadata for the frontend — drops the Overpass URL and other fields
+// only the backend needs.
+$sources_js = [];
+foreach ($sources as $id => $s) {
+    $sources_js[$id] = [
+        'label'          => $s['label'],
+        'subtitle'       => $s['subtitle']        ?? $s['label'],
+        'default_view'   => $s['default_view']    ?? null,
+        'group_property' => $s['group_property']  ?? null,
+    ];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -34,6 +46,12 @@ $team    = require __DIR__ . '/includes/team.php';
 
             <div class="panel-pane" data-pane="details" role="tabpanel">
                 <div class="panel-section panel-controls">
+                    <label class="control-label" for="dataset">Dataset</label>
+                    <select id="dataset" class="select-input">
+                        <?php foreach ($sources as $id => $src): ?>
+                            <option value="<?= htmlspecialchars($id) ?>"><?= htmlspecialchars($src['label']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
                     <input
                         id="search"
                         type="search"
@@ -111,6 +129,7 @@ $team    = require __DIR__ . '/includes/team.php';
         </aside>
     </div>
 
+    <script>window.__SOURCES = <?= json_encode($sources_js, JSON_UNESCAPED_SLASHES) ?>;</script>
     <script src="assets/js/main.js"></script>
     <script src="https://unpkg.com/globe.gl"></script>
     <script src="https://unpkg.com/topojson-client@3"></script>

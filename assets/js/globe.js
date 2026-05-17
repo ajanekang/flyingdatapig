@@ -2,15 +2,23 @@
     const container = document.getElementById('globe');
     if (!container || typeof Globe === 'undefined') return;
 
-    // Palette for the most common social_facility values; any unseen type falls
-    // back to the default accent color.
+    // Palette for the most common point types. Keys are values that appear in
+    // either the OSM `social_facility` tag (food banks dataset) or the
+    // `amenity` tag (universities), so we can color across datasets with one
+    // table. Unknown types fall back to DEFAULT_COLOR.
     const TYPE_COLORS = {
         food_bank:    '#ff7ab6',
         food_pantry:  '#7cc7ff',
         soup_kitchen: '#ffd166',
         clothing_bank:'#9af7c1',
+        university:   '#9af7c1',
+        college:      '#7cc7ff',
     };
     const DEFAULT_COLOR = '#c8b6ff';
+
+    const SOURCES = (typeof window !== 'undefined' && window.__SOURCES) || {};
+    let currentSourceId = null;
+    function currentSource() { return SOURCES[currentSourceId] || {}; }
 
     let allFeatures = [];
     let visibleTypes = new Set();
@@ -26,9 +34,12 @@
 
     const infoPanel  = document.getElementById('info-panel');
     const legendEl   = document.getElementById('legend-items');
+    const legendSec  = document.getElementById('legend');
     const searchEl   = document.getElementById('search');
     const resetEl    = document.getElementById('reset');
     const countEl    = document.getElementById('globe-count');
+    const datasetEl  = document.getElementById('dataset');
+    const subtitleEl = document.querySelector('.title-overlay .subtitle');
     const tabs       = document.querySelectorAll('.tab');
     const panes      = document.querySelectorAll('.panel-pane');
 
@@ -79,13 +90,18 @@
         // silently fails.
         .pointAltitude(0.002)
         .pointRadius(radiusForAltitude(1.9))
-        .pointColor((d) => colorForType(d.properties && d.properties.social_facility))
+        .pointColor((d) => {
+            const p = d.properties || {};
+            const prop = currentSource().group_property;
+            return colorForType((prop && p[prop]) || p.amenity);
+        })
         .pointLat((d) => d.geometry.coordinates[1])
         .pointLng((d) => d.geometry.coordinates[0])
         .pointLabel((d) => {
             const p = d.properties || {};
             const name = p.name || p['name:en'] || 'Unnamed';
-            const kind = (p.social_facility || '').replace(/_/g, ' ');
+            const prop = currentSource().group_property;
+            const kind = (((prop && p[prop]) || p.amenity) || '').replace(/_/g, ' ');
             return `<div class="globe-tooltip"><b>${escapeHtml(name)}</b>${kind ? '<br>' + escapeHtml(capitalize(kind)) : ''}</div>`;
         })
         .onPointClick((d) => {
@@ -100,8 +116,12 @@
             renderInfoEmpty();
         });
 
-    const HOME_VIEW = { lat: 40.0, lng: -98.0, altitude: 1.9 };
-    world.pointOfView(HOME_VIEW);
+    // Default view if the active source doesn't declare one.
+    const FALLBACK_VIEW = { lat: 20.0, lng: 0.0, altitude: 2.3 };
+    function homeView() {
+        return currentSource().default_view || FALLBACK_VIEW;
+    }
+    world.pointOfView(FALLBACK_VIEW);
 
     // Stylized solid globe: mutate the default material so the sphere reads as
     // a deep blue object rather than the default white. The atmosphere shader
@@ -218,12 +238,18 @@
         resetEl.addEventListener('click', () => {
             searchQuery = '';
             if (searchEl) searchEl.value = '';
-            visibleTypes = new Set(allFeatures.map((f) => f.properties.social_facility).filter(Boolean));
+            visibleTypes = collectTypes(allFeatures);
             renderLegend();
             applyFilter();
             selectedFeature = null;
             renderInfoEmpty();
-            world.pointOfView(HOME_VIEW, 900);
+            world.pointOfView(homeView(), 900);
+        });
+    }
+
+    if (datasetEl) {
+        datasetEl.addEventListener('change', () => {
+            loadSource(datasetEl.value);
         });
     }
 
@@ -234,31 +260,61 @@
         });
     }
 
-    fetch('api/data.php?source=na-food-banks')
-        .then((r) => {
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            return r.json();
-        })
-        .then((geojson) => {
-            allFeatures = (geojson.features || []).filter(
-                (f) =>
-                    f &&
-                    f.geometry &&
-                    Array.isArray(f.geometry.coordinates) &&
-                    typeof f.geometry.coordinates[0] === 'number' &&
-                    typeof f.geometry.coordinates[1] === 'number'
-            );
-            visibleTypes = new Set(allFeatures.map((f) => f.properties.social_facility).filter(Boolean));
-            renderLegend();
-            applyFilter();
-            renderInfoEmpty();
-        })
-        .catch((err) => {
-            console.error('Globe data load failed:', err);
-            if (infoPanel) {
-                infoPanel.innerHTML = `<div class="info-empty"><h2>Data unavailable</h2><p class="info-hint">${escapeHtml(err.message)}</p></div>`;
-            }
-        });
+    function loadSource(id) {
+        currentSourceId = id;
+        if (subtitleEl) subtitleEl.textContent = currentSource().subtitle || '';
+
+        // Reset state for the new dataset.
+        searchQuery = '';
+        if (searchEl) searchEl.value = '';
+        selectedFeature = null;
+        allFeatures = [];
+        visibleTypes = new Set();
+        world.pointsData([]);
+        renderLegend();
+        renderInfoEmpty();
+        if (countEl) countEl.textContent = 'Loading…';
+        world.pointOfView(homeView(), 900);
+
+        fetch('api/data.php?source=' + encodeURIComponent(id))
+            .then((r) => {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then((geojson) => {
+                // Bail out if the user switched datasets while this load was in flight.
+                if (currentSourceId !== id) return;
+                allFeatures = (geojson.features || []).filter(
+                    (f) =>
+                        f &&
+                        f.geometry &&
+                        Array.isArray(f.geometry.coordinates) &&
+                        typeof f.geometry.coordinates[0] === 'number' &&
+                        typeof f.geometry.coordinates[1] === 'number'
+                );
+                visibleTypes = collectTypes(allFeatures);
+                renderLegend();
+                applyFilter();
+                renderInfoEmpty();
+            })
+            .catch((err) => {
+                if (currentSourceId !== id) return;
+                console.error('Globe data load failed:', err);
+                if (infoPanel) {
+                    infoPanel.innerHTML = `<div class="info-empty"><h2>Data unavailable</h2><p class="info-hint">${escapeHtml(err.message)}</p></div>`;
+                }
+            });
+    }
+
+    function collectTypes(features) {
+        const prop = currentSource().group_property;
+        if (!prop) return new Set();
+        return new Set(features.map((f) => f.properties[prop]).filter(Boolean));
+    }
+
+    // Pick initial dataset from the dropdown if present, else the first registered source.
+    const initialId = (datasetEl && datasetEl.value) || Object.keys(SOURCES)[0];
+    if (initialId) loadSource(initialId);
 
     window.addEventListener('resize', () => {
         world.width(container.clientWidth).height(container.clientHeight);
@@ -267,9 +323,12 @@
     // === filtering ==========================================================
 
     function applyFilter() {
+        const groupProp = currentSource().group_property;
         const filtered = allFeatures.filter((f) => {
-            const t = f.properties.social_facility;
-            if (t && !visibleTypes.has(t)) return false;
+            if (groupProp) {
+                const t = f.properties[groupProp];
+                if (t && !visibleTypes.has(t)) return false;
+            }
             if (searchQuery) {
                 const p = f.properties;
                 const haystack = (
@@ -289,22 +348,32 @@
                     ? `${allFeatures.length.toLocaleString()} locations`
                     : `${filtered.length.toLocaleString()} of ${allFeatures.length.toLocaleString()} locations`;
         }
-        // Update per-type counts in the legend.
-        document.querySelectorAll('.legend-item').forEach((el) => {
-            const t = el.dataset.type;
-            const c = filtered.filter((f) => f.properties.social_facility === t).length;
-            const countSpan = el.querySelector('.legend-count');
-            if (countSpan) countSpan.textContent = c.toLocaleString();
-        });
+        if (groupProp) {
+            document.querySelectorAll('.legend-item').forEach((el) => {
+                const t = el.dataset.type;
+                const c = filtered.filter((f) => f.properties[groupProp] === t).length;
+                const countSpan = el.querySelector('.legend-count');
+                if (countSpan) countSpan.textContent = c.toLocaleString();
+            });
+        }
     }
 
     // === legend =============================================================
 
     function renderLegend() {
         if (!legendEl) return;
+        const groupProp = currentSource().group_property;
+        // Hide the entire legend section when the active source has no group
+        // property to color/filter by (e.g. universities — all amenity=university).
+        if (legendSec) legendSec.hidden = !groupProp;
+        if (!groupProp) {
+            legendEl.innerHTML = '';
+            return;
+        }
+
         const counts = {};
         for (const f of allFeatures) {
-            const t = f.properties.social_facility || 'unknown';
+            const t = f.properties[groupProp] || 'unknown';
             counts[t] = (counts[t] || 0) + 1;
         }
         const types = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
@@ -338,9 +407,10 @@
     function renderInfoEmpty() {
         if (!infoPanel) return;
         const total = allFeatures.length;
+        const title = currentSource().label || 'Data';
         infoPanel.innerHTML = `
             <div class="info-empty">
-                <h2>North America Food Banks</h2>
+                <h2>${escapeHtml(title)}</h2>
                 <p class="info-stats" id="globe-count">${total ? total.toLocaleString() + ' locations' : 'Loading…'}</p>
                 <p class="info-hint">Click a point on the globe to see details about that location.</p>
                 <p class="info-attribution">Data &copy; OpenStreetMap contributors (ODbL)</p>
@@ -351,7 +421,8 @@
         if (!infoPanel) return;
         const p = d.properties || {};
         const name = p.name || p['name:en'] || 'Unnamed location';
-        const type = p.social_facility || '';
+        const groupProp = currentSource().group_property;
+        const type = (groupProp && p[groupProp]) || p.amenity || '';
         const typeLabel = type ? capitalize(type.replace(/_/g, ' ')) : '';
         const typeColor = colorForType(type);
 
