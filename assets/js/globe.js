@@ -219,27 +219,7 @@
         })
         .catch((err) => console.warn('State labels unavailable:', err));
 
-    // Major cities (~243 entries, ~50KB) from Natural Earth via jsDelivr.
-    fetch('https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector/geojson/ne_110m_populated_places_simple.geojson')
-        .then((r) => r.json())
-        .then((geo) => {
-            (geo.features || []).forEach((f) => {
-                if (!f.geometry || !Array.isArray(f.geometry.coordinates)) return;
-                const [lng, lat] = f.geometry.coordinates;
-                allLabels.push({
-                    name:  f.properties.name,
-                    lat, lng,
-                    size:  0.3,
-                    dot:   0.18,
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    type:  'city',
-                    minAlt: 0,
-                    maxAlt: 1.5,
-                });
-            });
-            world.labelsData(visibleLabelsForAltitude(currentAltitude));
-        })
-        .catch((err) => console.warn('City labels unavailable:', err));
+    // (City labels and their dots removed per request.)
 
     // Keep point markers legible across zoom levels: scale radius with the
     // camera altitude (small dots when close, larger when far). Throttled to
