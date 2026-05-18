@@ -177,8 +177,15 @@
 
     // Default view if the active source doesn't declare one.
     const FALLBACK_VIEW = { lat: 20.0, lng: 0.0, altitude: 2.3 };
+    // Populated once via geo-IP. When available, every dataset switch
+    // re-centers on the viewer while preserving the dataset's altitude.
+    let viewerLocation = null;
     function homeView() {
-        return currentSource().default_view || FALLBACK_VIEW;
+        const dsv = currentSource().default_view || FALLBACK_VIEW;
+        if (viewerLocation) {
+            return { lat: viewerLocation.lat, lng: viewerLocation.lng, altitude: dsv.altitude };
+        }
+        return dsv;
     }
     world.pointOfView(FALLBACK_VIEW);
 
@@ -382,20 +389,20 @@
     const initialId = (datasetEl && datasetEl.value) || Object.keys(SOURCES)[0];
     if (initialId) loadSource(initialId);
 
-    // Pan to the viewer's approximate location via geo-IP on first paint.
-    // ipwho.is is keyless, HTTPS, and CORS-open. Silent fallback to the
-    // dataset's default_view on any failure. Skipped if the user has already
-    // switched datasets — that switch is a more deliberate intent signal than
-    // their IP.
+    // Resolve the viewer's approximate location via geo-IP, then re-center
+    // the globe. Once cached, homeView() consults viewerLocation, so every
+    // subsequent dataset switch re-centers on the viewer (with the dataset's
+    // own altitude). ipwho.is is keyless, HTTPS, and CORS-open. Silent
+    // fallback to dataset default_view on any failure.
     fetch('https://ipwho.is/')
         .then((r) => (r.ok ? r.json() : null))
         .then((info) => {
             if (!info || info.success === false) return;
-            if (currentSourceId !== initialId) return;
             const lat = Number(info.latitude);
             const lng = Number(info.longitude);
             if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-            world.pointOfView({ lat, lng, altitude: 2.0 }, 1500);
+            viewerLocation = { lat, lng };
+            world.pointOfView(homeView(), 1500);
         })
         .catch(() => {});
 
