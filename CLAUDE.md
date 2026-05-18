@@ -40,8 +40,8 @@ Each source in `includes/sources.php` has an `id`, upstream `url`, and `ttl_days
 
 - `bin/refresh_data.php` iterates every source. For each, it sends `If-None-Match` / `If-Modified-Since` based on the saved meta. On 304, it just bumps `last_checked`. On 200, it hashes the body — if the hash differs it atomically replaces the cached file; otherwise it leaves the file alone.
 - `api/data.php?source=<id>` serves the cached file. If the cache is older than `ttl_days`, it triggers an inline refresh under a non-blocking `flock` — only one concurrent request does the fetch, the rest serve stale until that one finishes. This is the lazy fallback in case cron didn't fire.
-- Cached payloads live at `data/cache/<id>.geojson` with meta at `data/cache/<id>.meta.json`. Both are gitignored.
-- The API also accepts `&download=1` to set `Content-Disposition: attachment`.
+- Cached payloads live at `data/cache/<id>.geojson`, with a pre-compressed `data/cache/<id>.geojson.gz` companion (level-9, written at refresh time) and meta at `data/cache/<id>.meta.json`. All three are gitignored.
+- `api/data.php` honors `If-None-Match` / `If-Modified-Since` (cheap 304s for revalidations) and serves the `.gz` variant when the client sends `Accept-Encoding: gzip`. Downloads (`&download=1`) always go uncompressed so the saved file is usable as-is.
 
 ### Source options
 

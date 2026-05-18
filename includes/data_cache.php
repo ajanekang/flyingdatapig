@@ -24,6 +24,7 @@ function cache_paths(string $id): array
     $base = CACHE_DIR . '/' . $id;
     return [
         'data' => $base . '.geojson',
+        'gz'   => $base . '.geojson.gz',
         'meta' => $base . '.meta.json',
         'lock' => $base . '.lock',
     ];
@@ -177,6 +178,15 @@ function refresh_source(string $id, array $source): array
         $tmp = $paths['data'] . '.tmp';
         file_put_contents($tmp, $body);
         rename($tmp, $paths['data']);
+
+        // Pre-compress so api/data.php can serve gzip without re-compressing
+        // per request. Big GeoJSONs (50MB+ for convenience stores) compress
+        // ~5-10x. Level 9 because this runs once per weekly refresh — the
+        // extra CPU pays back on every visitor request.
+        $gz_tmp = $paths['gz'] . '.tmp';
+        if (file_put_contents($gz_tmp, gzencode($body, 9)) !== false) {
+            rename($gz_tmp, $paths['gz']);
+        }
     }
 
     $new_meta = [
