@@ -107,6 +107,15 @@ $target_query = '[out:json][timeout:300];'
     . ');'
     . 'out center;';
 
+// Convenience stores worldwide (shop=convenience). Restricted to features
+// with a `brand` tag so the payload stays manageable and the dataset is
+// dominated by recognizable chains (7-Eleven, FamilyMart, Lawson, GS25,
+// Circle K, etc.) rather than untagged corner shops. Even so this is one
+// of the larger datasets — expect 100k+ features.
+$convenience_query = '[out:json][timeout:600];'
+    . 'nwr["shop"="convenience"]["brand"];'
+    . 'out center;';
+
 return [
     'global-costco' => [
         'label'        => 'Costco Warehouses (Global)',
@@ -149,6 +158,21 @@ return [
         'source_url'   => 'https://www.openstreetmap.org/about',
         'transform'    => 'osm_to_geojson',
         'timeout'      => 480,
+        'lazy_refresh' => false,
+        'default_view' => ['lat' => 20.0, 'lng' => 10.0, 'altitude' => 2.4],
+        'group_property' => null,
+    ],
+    'global-convenience-stores' => [
+        'label'        => 'Global Convenience Stores',
+        'description'  => 'Brand-tagged convenience stores worldwide from OpenStreetMap (shop=convenience with a brand tag). Captures international chains like 7-Eleven, FamilyMart, Lawson, GS25, Circle K, Wawa, and many more.',
+        'subtitle'     => 'Convenience stores worldwide',
+        'url'          => 'https://overpass-api.de/api/interpreter?data=' . rawurlencode($convenience_query),
+        'format'       => 'geojson',
+        'ttl_days'     => 30,
+        'attribution'  => '© OpenStreetMap contributors (ODbL)',
+        'source_url'   => 'https://www.openstreetmap.org/about',
+        'transform'    => 'osm_to_geojson',
+        'timeout'      => 600,
         'lazy_refresh' => false,
         'default_view' => ['lat' => 20.0, 'lng' => 10.0, 'altitude' => 2.4],
         'group_property' => null,

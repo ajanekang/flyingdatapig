@@ -11,6 +11,7 @@ A single-page PHP site that plots cached OpenStreetMap-derived datasets onto a 3
 - Costco Warehouses (Global)
 - FedEx Locations (Global)
 - Global Airports
+- Global Convenience Stores (brand-tagged: 7-Eleven, FamilyMart, Lawson, GS25, Circle K, Wawa, etc.)
 - Global Power Plants (filterable by source: solar, wind, hydro, nuclear, coal, gas, biomass, etc.)
 - Global Universities
 - H Mart Stores
