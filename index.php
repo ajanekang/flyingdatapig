@@ -27,6 +27,7 @@ foreach ($sources as $id => $s) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars('Flying Data Pig — ' . ($sources[$selectedSource]['label'] ?? '3D Data Globe')) ?></title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <meta name="description" content="A non-profit platform providing public data visualization based on Open APIs and JSON data collected by contributors.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
