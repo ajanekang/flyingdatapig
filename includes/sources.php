@@ -116,13 +116,18 @@ $convenience_query = '[out:json][timeout:600];'
     . 'nwr["shop"="convenience"]["brand"];'
     . 'out center;';
 
-// Tesla Supercharger stations worldwide. Filters by the Supercharger-
-// specific socket tags so this is purely high-speed Superchargers, not the
-// slower Tesla Destination Chargers (which use J1772/Type 2 sockets).
+// Tesla Supercharger stations worldwide. OSM tagging is inconsistent, so
+// we cast a wide net: explicit Supercharger sockets, plus any charging
+// station marked as part of the Tesla Supercharger network, plus any
+// station operated by Tesla. The last clause may pull in a small number
+// of legacy Destination Chargers, but Tesla has been retiring those and
+// the vast majority of Tesla-operated charging on OSM is Superchargers.
 $tesla_sc_query = '[out:json][timeout:300];'
     . '('
     . 'nwr["amenity"="charging_station"]["socket:tesla_supercharger"];'
     . 'nwr["amenity"="charging_station"]["socket:tesla_supercharger_ccs"];'
+    . 'nwr["amenity"="charging_station"]["network"~"Tesla.*Supercharger",i];'
+    . 'nwr["amenity"="charging_station"]["operator"~"^Tesla",i];'
     . ');'
     . 'out center;';
 
@@ -295,7 +300,7 @@ return [
     ],
     'global-tesla-superchargers' => [
         'label'        => 'Tesla Superchargers (Global)',
-        'description'  => 'Tesla Supercharger stations worldwide from OpenStreetMap (charging_station with socket:tesla_supercharger or socket:tesla_supercharger_ccs). Excludes the slower Tesla Destination Chargers.',
+        'description'  => 'Tesla Supercharger stations worldwide from OpenStreetMap. Combines stations tagged with Supercharger sockets, the Tesla Supercharger network, or Tesla as operator — covers the inconsistent tagging conventions across regions.',
         'subtitle'     => 'Tesla Supercharger stations worldwide',
         'url'          => 'https://overpass-api.de/api/interpreter?data=' . rawurlencode($tesla_sc_query),
         'format'       => 'geojson',
