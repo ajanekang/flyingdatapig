@@ -17,6 +17,7 @@ foreach ($sources as $id => $s) {
         'subtitle'       => $s['subtitle']        ?? $s['label'],
         'default_view'   => $s['default_view']    ?? null,
         'group_property' => $s['group_property']  ?? null,
+        'bin_top_n'      => $s['bin_top_n']       ?? null,
     ];
 }
 ?>

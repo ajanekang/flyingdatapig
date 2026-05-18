@@ -175,7 +175,8 @@ return [
         'timeout'      => 600,
         'lazy_refresh' => false,
         'default_view' => ['lat' => 20.0, 'lng' => 10.0, 'altitude' => 2.4],
-        'group_property' => null,
+        'group_property' => 'brand',
+        'bin_top_n'      => 20,
     ],
     'global-power-plants' => [
         'label'        => 'Global Power Plants',

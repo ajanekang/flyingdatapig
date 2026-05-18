@@ -530,6 +530,7 @@
                         typeof f.geometry.coordinates[1] === 'number'
                 );
                 tagFeatureCountries(allFeatures);
+                binToTopN(allFeatures);
                 visibleTypes = collectTypes(allFeatures);
                 renderLegend();
                 applyFilter();
@@ -548,6 +549,35 @@
         const prop = currentSource().group_property;
         if (!prop) return new Set();
         return new Set(features.map((f) => f.properties[prop]).filter(Boolean));
+    }
+
+    // For sources that declare bin_top_n, collapse the long tail of
+    // group_property values into a single "Other" bucket so the legend stays
+    // legible. The top-N values themselves keep their real labels and colors.
+    function binToTopN(features) {
+        const src = currentSource();
+        const prop = src.group_property;
+        const n = src.bin_top_n;
+        if (!prop || !n || !features.length) return;
+        const counts = new Map();
+        for (const f of features) {
+            const v = f.properties[prop];
+            if (!v) continue;
+            counts.set(v, (counts.get(v) || 0) + 1);
+        }
+        const top = new Set(
+            [...counts.entries()]
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, n)
+                .map((e) => e[0])
+        );
+        for (const f of features) {
+            const v = f.properties[prop];
+            if (v && !top.has(v)) {
+                f.properties.__binned_original = v; // keep original for search haystack
+                f.properties[prop] = 'Other';
+            }
+        }
     }
 
     // Pick initial dataset from the dropdown if present, else the first registered source.
@@ -751,7 +781,24 @@
     // === helpers ============================================================
 
     function colorForType(t) {
-        return TYPE_COLORS[t] || DEFAULT_COLOR;
+        if (!t) return DEFAULT_COLOR;
+        if (TYPE_COLORS[t]) return TYPE_COLORS[t];
+        if (t === 'Other') return DEFAULT_COLOR;
+        // Stable hash-derived hue for any other tag value (used by binned
+        // datasets like convenience stores where the top brands are dataset-
+        // specific and not enumerated in TYPE_COLORS).
+        let h = 0;
+        for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0;
+        const hue = ((h % 360) + 360) % 360;
+        return hslToHex(hue, 62, 64);
+    }
+    function hslToHex(h, s, l) {
+        s /= 100; l /= 100;
+        const k = (n) => (n + h / 30) % 12;
+        const a = s * Math.min(l, 1 - l);
+        const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+        const toHex = (v) => Math.round(f(v) * 255).toString(16).padStart(2, '0');
+        return '#' + toHex(0) + toHex(8) + toHex(4);
     }
 
     // Linear scale clamped to a sensible range. Globe.gl point radius is in
