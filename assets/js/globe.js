@@ -382,6 +382,23 @@
     const initialId = (datasetEl && datasetEl.value) || Object.keys(SOURCES)[0];
     if (initialId) loadSource(initialId);
 
+    // Pan to the viewer's approximate location via geo-IP on first paint.
+    // ipwho.is is keyless, HTTPS, and CORS-open. Silent fallback to the
+    // dataset's default_view on any failure. Skipped if the user has already
+    // switched datasets — that switch is a more deliberate intent signal than
+    // their IP.
+    fetch('https://ipwho.is/')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((info) => {
+            if (!info || info.success === false) return;
+            if (currentSourceId !== initialId) return;
+            const lat = Number(info.latitude);
+            const lng = Number(info.longitude);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+            world.pointOfView({ lat, lng, altitude: 2.0 }, 1500);
+        })
+        .catch(() => {});
+
     window.addEventListener('resize', () => {
         world.width(container.clientWidth).height(container.clientHeight);
     });
