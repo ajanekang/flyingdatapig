@@ -140,6 +140,23 @@
         t.addEventListener('click', () => activateTab(t.dataset.tab));
     });
 
+    // Fullscreen handler for the per-point Google Maps embed — single
+    // delegated listener since infoPanel.innerHTML is replaced on every
+    // selection, which would otherwise wipe per-render listeners.
+    if (infoPanel) {
+        infoPanel.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-action="map-fullscreen"]');
+            if (!btn) return;
+            const target = btn.closest('[data-fullscreen-target]');
+            if (!target) return;
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else if (target.requestFullscreen) {
+                target.requestFullscreen().catch((err) => console.warn('Fullscreen denied:', err));
+            }
+        });
+    }
+
     const world = Globe()(container)
         .backgroundColor('rgba(0,0,0,0)')
         .showAtmosphere(true)
@@ -526,11 +543,29 @@
             ? `https://www.openstreetmap.org/${escapeAttr(p.osm_type)}/${encodeURIComponent(p.osm_id)}`
             : null;
 
+        const [lng, lat] = d.geometry.coordinates;
+        // Google Maps embed centered on the point with satellite-hybrid view
+        // for a 3D-ish look. Works without an API key.
+        const mapSrc =
+            'https://maps.google.com/maps?q=' + lat + ',' + lng +
+            '&t=k&z=17&ie=UTF8&iwloc=&output=embed';
+
         infoPanel.innerHTML = `
             <div class="info-detail">
                 <h2>${escapeHtml(name)}</h2>
                 ${typeLabel ? `<span class="type-badge" style="background-color:${typeColor};color:${onColor(typeColor)}">${escapeHtml(typeLabel)}</span>` : ''}
                 ${rows ? `<dl class="detail-grid">${rows}</dl>` : ''}
+                <div class="info-map" data-fullscreen-target>
+                    <iframe class="map-frame"
+                        src="${escapeAttr(mapSrc)}"
+                        loading="lazy"
+                        referrerpolicy="no-referrer-when-downgrade"
+                        allowfullscreen></iframe>
+                    <button class="map-expand" type="button"
+                        data-action="map-fullscreen"
+                        aria-label="Expand map to fullscreen"
+                        title="Expand map">⛶</button>
+                </div>
                 ${osmHref ? `<a class="info-osm-link" href="${osmHref}" target="_blank" rel="noopener">View on OpenStreetMap &rarr;</a>` : ''}
             </div>`;
     }
