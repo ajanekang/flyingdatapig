@@ -20,6 +20,36 @@
     let currentSourceId = null;
     function currentSource() { return SOURCES[currentSourceId] || {}; }
 
+    // URL state — `?source=<id>&lat=<…>&lng=<…>&alt=<…>` mirrors the current
+    // dataset and camera position so the live URL is shareable. Read once on
+    // boot to honor any view encoded in a shared link, then written back on
+    // dataset switches and (debounced) camera changes.
+    function parseUrlView() {
+        const p = new URLSearchParams(window.location.search);
+        const lat = Number(p.get('lat'));
+        const lng = Number(p.get('lng'));
+        const alt = Number(p.get('alt'));
+        if (![lat, lng, alt].every(Number.isFinite)) return null;
+        return { lat, lng, altitude: alt };
+    }
+    let urlWriteTimer = null;
+    function writeUrlState() {
+        if (!currentSourceId) return;
+        const p = new URLSearchParams(window.location.search);
+        p.set('source', currentSourceId);
+        const pov = (typeof world !== 'undefined' && world.pointOfView) ? world.pointOfView() : null;
+        if (pov && Number.isFinite(pov.lat) && Number.isFinite(pov.lng) && Number.isFinite(pov.altitude)) {
+            p.set('lat', pov.lat.toFixed(4));
+            p.set('lng', pov.lng.toFixed(4));
+            p.set('alt', pov.altitude.toFixed(2));
+        }
+        history.replaceState(null, '', window.location.pathname + '?' + p.toString());
+    }
+    function scheduleUrlWrite() {
+        clearTimeout(urlWriteTimer);
+        urlWriteTimer = setTimeout(writeUrlState, 250);
+    }
+
     function buildTooltipHTML(d) {
         const p = d.properties || {};
         const name = p.name || p['name:en'] || 'Unnamed';
@@ -295,6 +325,7 @@
     let zoomRaf = null;
     world.onZoom((pov) => {
         currentAltitude = pov.altitude;
+        scheduleUrlWrite();
         if (zoomRaf !== null) return;
         zoomRaf = requestAnimationFrame(() => {
             zoomRaf = null;
@@ -336,6 +367,8 @@
     function loadSource(id) {
         currentSourceId = id;
         if (subtitleEl) subtitleEl.textContent = currentSource().subtitle || '';
+        const label = currentSource().label;
+        if (label) document.title = 'Flying Data Pig — ' + label;
 
         // Reset state for the new dataset.
         searchQuery = '';
@@ -389,22 +422,29 @@
     const initialId = (datasetEl && datasetEl.value) || Object.keys(SOURCES)[0];
     if (initialId) loadSource(initialId);
 
-    // Resolve the viewer's approximate location via geo-IP, then re-center
-    // the globe. Once cached, homeView() consults viewerLocation, so every
-    // subsequent dataset switch re-centers on the viewer (with the dataset's
-    // own altitude). ipwho.is is keyless, HTTPS, and CORS-open. Silent
-    // fallback to dataset default_view on any failure.
-    fetch('https://ipwho.is/')
-        .then((r) => (r.ok ? r.json() : null))
-        .then((info) => {
-            if (!info || info.success === false) return;
-            const lat = Number(info.latitude);
-            const lng = Number(info.longitude);
-            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-            viewerLocation = { lat, lng };
-            world.pointOfView(homeView(), 1500);
-        })
-        .catch(() => {});
+    // Honor a view explicitly encoded in the URL — that's a deliberate share
+    // link, so it wins over both the dataset's default_view and geo-IP.
+    const urlView = parseUrlView();
+    if (urlView) {
+        world.pointOfView(urlView, 0);
+    } else {
+        // Otherwise resolve the viewer's approximate location via geo-IP and
+        // re-center. Once cached, homeView() consults viewerLocation, so every
+        // subsequent dataset switch re-centers on the viewer (with the
+        // dataset's own altitude). ipwho.is is keyless, HTTPS, and CORS-open.
+        // Silent fallback to dataset default_view on any failure.
+        fetch('https://ipwho.is/')
+            .then((r) => (r.ok ? r.json() : null))
+            .then((info) => {
+                if (!info || info.success === false) return;
+                const lat = Number(info.latitude);
+                const lng = Number(info.longitude);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+                viewerLocation = { lat, lng };
+                world.pointOfView(homeView(), 1500);
+            })
+            .catch(() => {});
+    }
 
     window.addEventListener('resize', () => {
         world.width(container.clientWidth).height(container.clientHeight);

@@ -2,6 +2,12 @@
 $sources = require __DIR__ . '/includes/sources.php';
 $team    = require __DIR__ . '/includes/team.php';
 
+// Honor ?source=<id> for shareable deep links. Validated against the
+// registry; falls back to food banks if missing or unknown.
+$selectedSource = (isset($_GET['source']) && is_string($_GET['source']) && isset($sources[$_GET['source']]))
+    ? $_GET['source']
+    : 'na-food-banks';
+
 // Slim metadata for the frontend — drops the Overpass URL and other fields
 // only the backend needs.
 $sources_js = [];
@@ -19,7 +25,7 @@ foreach ($sources as $id => $s) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flying Data Pig — 3D Data Globe</title>
+    <title><?= htmlspecialchars('Flying Data Pig — ' . ($sources[$selectedSource]['label'] ?? '3D Data Globe')) ?></title>
     <meta name="description" content="A non-profit platform providing public data visualization based on Open APIs and JSON data collected by contributors.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -107,7 +113,7 @@ foreach ($sources as $id => $s) {
                     <label class="control-label" for="dataset">Dataset</label>
                     <select id="dataset" class="select-input">
                         <?php foreach ($sources as $id => $src): ?>
-                            <option value="<?= htmlspecialchars($id) ?>"<?= $id === 'na-food-banks' ? ' selected' : '' ?>><?= htmlspecialchars($src['label']) ?></option>
+                            <option value="<?= htmlspecialchars($id) ?>"<?= $id === $selectedSource ? ' selected' : '' ?>><?= htmlspecialchars($src['label']) ?></option>
                         <?php endforeach; ?>
                     </select>
                     <input
