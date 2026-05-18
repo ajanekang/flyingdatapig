@@ -3,6 +3,22 @@ declare(strict_types=1);
 
 const CACHE_DIR = __DIR__ . '/../data/cache';
 
+// Parse a PHP ini-style memory size string ("128M", "1G", "536870912") into
+// bytes. Returns 0 if the string is unparseable.
+function memoryLimitBytes(string $val): int
+{
+    $val = trim($val);
+    if ($val === '' || $val === '-1') return 0;
+    $unit = strtolower($val[strlen($val) - 1]);
+    $num  = (int) $val;
+    switch ($unit) {
+        case 'g': return $num * 1024 * 1024 * 1024;
+        case 'm': return $num * 1024 * 1024;
+        case 'k': return $num * 1024;
+    }
+    return $num;
+}
+
 function cache_paths(string $id): array
 {
     $base = CACHE_DIR . '/' . $id;
@@ -97,6 +113,13 @@ function refresh_source(string $id, array $source): array
     // default 30s PHP max_execution_time when this runs inline from a web
     // request. Give it room.
     @set_time_limit(((int) ($source['timeout'] ?? 60)) + 30);
+    // Same for memory: very large datasets (Starbucks ~23k, McDonald's ~36k
+    // features) decode + transform to a few hundred MB peak with PHP arrays.
+    // Override only if a tighter limit is currently in effect.
+    $current = trim((string) ini_get('memory_limit'));
+    if ($current === '' || ($current !== '-1' && memoryLimitBytes($current) < 1024 * 1024 * 1024)) {
+        @ini_set('memory_limit', '1024M');
+    }
 
     $meta = read_meta($id) ?? [];
     $request_headers = [];
