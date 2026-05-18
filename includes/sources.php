@@ -64,6 +64,25 @@ $mcdonalds_query = '[out:json][timeout:300];'
     . ');'
     . 'out center;';
 
+// FedEx locations worldwide (Q459477). Includes drop-off points, Office
+// (Kinko's) stores, and shipping centers tagged under the FedEx brand.
+$fedex_query = '[out:json][timeout:300];'
+    . '('
+    . 'nwr["brand"="FedEx"];'
+    . 'nwr["brand:wikidata"="Q459477"];'
+    . ');'
+    . 'out center;';
+
+// Airports and aerodromes worldwide. `aeroway=aerodrome` is the OSM
+// canonical tag — it captures everything from international hubs to small
+// regional fields. Expect tens of thousands of features.
+$airports_query = '[out:json][timeout:300];'
+    . '('
+    . 'node["aeroway"="aerodrome"];'
+    . 'way["aeroway"="aerodrome"];'
+    . ');'
+    . 'out center;';
+
 return [
     'global-costco' => [
         'label'        => 'Costco Warehouses (Global)',
@@ -78,6 +97,36 @@ return [
         'timeout'      => 360,
         'lazy_refresh' => false,
         'default_view' => ['lat' => 35.0, 'lng' => -100.0, 'altitude' => 2.2],
+        'group_property' => null,
+    ],
+    'global-fedex' => [
+        'label'        => 'FedEx Locations (Global)',
+        'description'  => 'FedEx shipping center, office, and drop-off locations worldwide from OpenStreetMap (brand=FedEx or brand:wikidata=Q459477).',
+        'subtitle'     => 'FedEx locations worldwide',
+        'url'          => 'https://overpass-api.de/api/interpreter?data=' . rawurlencode($fedex_query),
+        'format'       => 'geojson',
+        'ttl_days'     => 30,
+        'attribution'  => '© OpenStreetMap contributors (ODbL)',
+        'source_url'   => 'https://www.openstreetmap.org/about',
+        'transform'    => 'osm_to_geojson',
+        'timeout'      => 360,
+        'lazy_refresh' => false,
+        'default_view' => ['lat' => 38.0, 'lng' => -90.0, 'altitude' => 2.2],
+        'group_property' => null,
+    ],
+    'global-airports' => [
+        'label'        => 'Global Airports',
+        'description'  => 'Airports and aerodromes worldwide, tagged aeroway=aerodrome on OpenStreetMap — international hubs through regional fields.',
+        'subtitle'     => 'Airports worldwide',
+        'url'          => 'https://overpass-api.de/api/interpreter?data=' . rawurlencode($airports_query),
+        'format'       => 'geojson',
+        'ttl_days'     => 30,
+        'attribution'  => '© OpenStreetMap contributors (ODbL)',
+        'source_url'   => 'https://www.openstreetmap.org/about',
+        'transform'    => 'osm_to_geojson',
+        'timeout'      => 480,
+        'lazy_refresh' => false,
+        'default_view' => ['lat' => 20.0, 'lng' => 10.0, 'altitude' => 2.4],
         'group_property' => null,
     ],
     'global-universities' => [

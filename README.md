@@ -9,6 +9,8 @@ Live site: https://flyingdatapig.org
 A single-page PHP site that plots cached OpenStreetMap-derived datasets onto a 3D globe via [Globe.gl](https://globe.gl/). Current datasets:
 
 - Costco Warehouses (Global)
+- FedEx Locations (Global)
+- Global Airports
 - Global Universities
 - McDonald's Restaurants (Global)
 - North America Food Banks, Pantries & Soup Kitchens
