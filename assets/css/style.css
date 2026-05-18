@@ -579,34 +579,6 @@ button { font: inherit; cursor: pointer; }
     pointer-events: none;
 }
 
-/* DOM-based flat point markers (htmlElementsData). */
-.point-dot {
-    width: 10px;
-    height: 10px;
-    margin: -5px 0 0 -5px;          /* center the dot on its lat/lng anchor */
-    border-radius: 50%;
-    border: 1.5px solid rgba(255, 255, 255, 0.65);
-    box-shadow: 0 0 4px rgba(0, 0, 0, 0.55);
-    cursor: pointer;
-    pointer-events: auto;
-    transition: transform 120ms, filter 120ms, border-color 120ms;
-}
-
-.point-dot:hover {
-    filter: brightness(1.35);
-    border-color: #fff;
-    z-index: 5;
-}
-
-/* When the hover tooltip is a body-level DOM overlay (instead of a
-   Globe.gl-rendered floating div) it needs its own fixed positioning. */
-.hover-tooltip {
-    position: fixed;
-    z-index: 1000;
-    pointer-events: none;
-    margin: 0;
-}
-
 .globe-tooltip-rich {
     display: block;
     max-width: 340px;

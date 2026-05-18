@@ -20,33 +20,6 @@
     let currentSourceId = null;
     function currentSource() { return SOURCES[currentSourceId] || {}; }
 
-    // Shared hover tooltip — one DOM element appended to the body; we toggle
-    // it visible and reposition it from the point's mouse events.
-    const hoverTip = document.createElement('div');
-    hoverTip.className = 'globe-tooltip globe-tooltip-rich hover-tooltip';
-    hoverTip.style.display = 'none';
-    document.body.appendChild(hoverTip);
-
-    function showHoverTooltip(d, x, y) {
-        hoverTip.innerHTML = buildTooltipHTML(d);
-        hoverTip.style.display = 'block';
-        positionHoverTooltip(x, y);
-    }
-    function hideHoverTooltip() {
-        hoverTip.style.display = 'none';
-    }
-    function positionHoverTooltip(x, y) {
-        const pad = 16;
-        // Defer dimension read so layout has settled after innerHTML change.
-        const r = hoverTip.getBoundingClientRect();
-        let left = x + pad;
-        let top  = y + pad;
-        if (left + r.width  > window.innerWidth)  left = x - r.width  - pad;
-        if (top  + r.height > window.innerHeight) top  = y - r.height - pad;
-        hoverTip.style.left = Math.max(0, left) + 'px';
-        hoverTip.style.top  = Math.max(0, top)  + 'px';
-    }
-
     function buildTooltipHTML(d) {
         const p = d.properties || {};
         const name = p.name || p['name:en'] || 'Unnamed';
@@ -80,26 +53,6 @@
         const p = d.properties || {};
         const prop = currentSource().group_property;
         return colorForType((prop && p[prop]) || p.amenity);
-    }
-
-    function createPointEl(d) {
-        const el = document.createElement('div');
-        el.className = 'point-dot';
-        el.style.background = colorForPoint(d);
-
-        el.addEventListener('mouseenter', (e) => showHoverTooltip(d, e.clientX, e.clientY));
-        el.addEventListener('mousemove',  (e) => positionHoverTooltip(e.clientX, e.clientY));
-        el.addEventListener('mouseleave', hideHoverTooltip);
-        el.addEventListener('click', (e) => {
-            e.stopPropagation();
-            hideHoverTooltip();
-            selectedFeature = d;
-            renderInfo(d);
-            activateTab('details');
-            const [lng, lat] = d.geometry.coordinates;
-            world.pointOfView({ lat, lng, altitude: 0.7 }, 900);
-        });
-        return el;
     }
 
     let allFeatures = [];
@@ -182,19 +135,28 @@
         .labelColor((d) => d.color)
         .labelAltitude(0.01)
         .labelResolution(2)
-        // Points are rendered as DOM elements (htmlElementsData) rather than
-        // Globe.gl's cylinder pointsData, so each point is a true flat 2D
-        // circle that always faces the camera, and native DOM events handle
-        // hover/click reliably.
-        .htmlElementsData([])
-        .htmlLat((d) => d.geometry.coordinates[1])
-        .htmlLng((d) => d.geometry.coordinates[0])
-        .htmlAltitude(0.005)
-        .htmlElement((d) => createPointEl(d))
+        // GPU-rendered cylinder points: kept very thin (altitude 0.003) so
+        // they read as flat discs from most angles, while staying performant
+        // for the 16k+ universities dataset. DOM-based htmlElementsData was
+        // too slow at that scale.
+        .pointsData([])
+        .pointLat((d) => d.geometry.coordinates[1])
+        .pointLng((d) => d.geometry.coordinates[0])
+        .pointAltitude(0.003)
+        .pointResolution(24)
+        .pointRadius(radiusForAltitude(1.9))
+        .pointColor((d) => colorForPoint(d))
+        .pointLabel((d) => '<div class="globe-tooltip globe-tooltip-rich">' + buildTooltipHTML(d) + '</div>')
+        .onPointClick((d) => {
+            selectedFeature = d;
+            renderInfo(d);
+            activateTab('details');
+            const [lng, lat] = d.geometry.coordinates;
+            world.pointOfView({ lat, lng, altitude: 0.7 }, 900);
+        })
         .onGlobeClick(() => {
             selectedFeature = null;
             renderInfoEmpty();
-            hideHoverTooltip();
         });
 
     // Default view if the active source doesn't declare one.
@@ -313,8 +275,7 @@
         if (zoomRaf !== null) return;
         zoomRaf = requestAnimationFrame(() => {
             zoomRaf = null;
-            // DOM point dots are fixed-pixel size — no per-frame radius update
-            // is needed. Only re-filter which labels are visible.
+            world.pointRadius(radiusForAltitude(currentAltitude));
             world.labelsData(visibleLabelsForAltitude(currentAltitude));
         });
     });
@@ -355,8 +316,7 @@
         selectedFeature = null;
         allFeatures = [];
         visibleTypes = new Set();
-        world.htmlElementsData([]);
-        hideHoverTooltip();
+        world.pointsData([]);
         renderLegend();
         renderInfoEmpty();
         if (countEl) countEl.textContent = 'Loading…';
@@ -427,7 +387,7 @@
             }
             return true;
         });
-        world.htmlElementsData(filtered);
+        world.pointsData(filtered);
         if (countEl) {
             countEl.textContent =
                 filtered.length === allFeatures.length
