@@ -83,6 +83,13 @@ $airports_query = '[out:json][timeout:300];'
     . ');'
     . 'out center;';
 
+// Power plants worldwide (power=plant). `plant:source` (solar, wind, hydro,
+// nuclear, coal, gas, oil, biomass, geothermal, waste, …) drives the legend
+// and per-type filtering. `nwr` covers nodes, ways, and relations.
+$power_plants_query = '[out:json][timeout:300];'
+    . 'nwr["power"="plant"];'
+    . 'out center;';
+
 return [
     'global-costco' => [
         'label'        => 'Costco Warehouses (Global)',
@@ -128,6 +135,21 @@ return [
         'lazy_refresh' => false,
         'default_view' => ['lat' => 20.0, 'lng' => 10.0, 'altitude' => 2.4],
         'group_property' => null,
+    ],
+    'global-power-plants' => [
+        'label'        => 'Global Power Plants',
+        'description'  => 'Power plants worldwide from OpenStreetMap (power=plant), grouped by plant:source — solar, wind, hydro, nuclear, coal, gas, biomass, geothermal, and more.',
+        'subtitle'     => 'Power plants worldwide',
+        'url'          => 'https://overpass-api.de/api/interpreter?data=' . rawurlencode($power_plants_query),
+        'format'       => 'geojson',
+        'ttl_days'     => 30,
+        'attribution'  => '© OpenStreetMap contributors (ODbL)',
+        'source_url'   => 'https://www.openstreetmap.org/about',
+        'transform'    => 'osm_to_geojson',
+        'timeout'      => 480,
+        'lazy_refresh' => false,
+        'default_view' => ['lat' => 20.0, 'lng' => 10.0, 'altitude' => 2.4],
+        'group_property' => 'plant:source',
     ],
     'global-universities' => [
         'label'        => 'Global Universities',

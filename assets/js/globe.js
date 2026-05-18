@@ -3,9 +3,10 @@
     if (!container || typeof Globe === 'undefined') return;
 
     // Palette for the most common point types. Keys are values that appear in
-    // either the OSM `social_facility` tag (food banks dataset) or the
-    // `amenity` tag (universities), so we can color across datasets with one
-    // table. Unknown types fall back to DEFAULT_COLOR.
+    // any of the datasets' group_property tags — `social_facility` (food
+    // banks), `amenity` (universities), `plant:source` (power plants) — so we
+    // can color across datasets with one table. Unknown types fall back to
+    // DEFAULT_COLOR.
     const TYPE_COLORS = {
         food_bank:    '#ff7ab6',
         food_pantry:  '#7cc7ff',
@@ -13,6 +14,17 @@
         clothing_bank:'#9af7c1',
         university:   '#9af7c1',
         college:      '#7cc7ff',
+        // Power plant sources (plant:source).
+        solar:        '#ffb703',
+        wind:         '#90e0ef',
+        hydro:        '#4895ef',
+        nuclear:      '#a3e635',
+        coal:         '#737373',
+        gas:          '#fb7185',
+        oil:          '#92400e',
+        biomass:      '#84cc16',
+        geothermal:   '#ef4444',
+        waste:        '#a78bfa',
     };
     const DEFAULT_COLOR = '#c8b6ff';
 

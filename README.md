@@ -11,6 +11,7 @@ A single-page PHP site that plots cached OpenStreetMap-derived datasets onto a 3
 - Costco Warehouses (Global)
 - FedEx Locations (Global)
 - Global Airports
+- Global Power Plants (filterable by source: solar, wind, hydro, nuclear, coal, gas, biomass, etc.)
 - Global Universities
 - McDonald's Restaurants (Global)
 - North America Food Banks, Pantries & Soup Kitchens
