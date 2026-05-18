@@ -135,15 +135,16 @@
         .labelColor((d) => d.color)
         .labelAltitude(0.01)
         .labelResolution(2)
-        // GPU-rendered cylinder points: kept very thin (altitude 0.003) so
-        // they read as flat discs from most angles, while staying performant
-        // for the 16k+ universities dataset. DOM-based htmlElementsData was
-        // too slow at that scale.
+        // GPU-rendered cylinder points: thin enough to read as flat discs,
+        // thick enough for Globe.gl's raycaster to reliably hit when the
+        // globe is tilted. 0.003 looked nice but the raycaster missed at
+        // oblique viewing angles (hover/click stopped firing). 0.006 is the
+        // smallest altitude that still raycasts reliably in practice.
         .pointsData([])
         .pointLat((d) => d.geometry.coordinates[1])
         .pointLng((d) => d.geometry.coordinates[0])
-        .pointAltitude(0.003)
-        .pointResolution(24)
+        .pointAltitude(0.006)
+        .pointResolution(32)
         .pointRadius(radiusForAltitude(1.9))
         .pointColor((d) => colorForPoint(d))
         .pointLabel((d) => '<div class="globe-tooltip globe-tooltip-rich">' + buildTooltipHTML(d) + '</div>')

@@ -20,6 +20,24 @@ $uni_query = '[out:json][timeout:300];'
     . 'node["amenity"="university"];'
     . 'out;';
 
+// Walmart stores worldwide. `nwr` matches nodes/ways/relations; the
+// brand:wikidata clause catches stores tagged only by Wikidata ID. ~7,600
+// features at last probe.
+$walmart_query = '[out:json][timeout:300];'
+    . '('
+    . 'nwr["brand"="Walmart"];'
+    . 'nwr["brand:wikidata"="Q483551"];'
+    . ');'
+    . 'out center;';
+
+// Costco warehouses worldwide. Same pattern as Walmart. ~2,300 features.
+$costco_query = '[out:json][timeout:300];'
+    . '('
+    . 'nwr["brand"="Costco"];'
+    . 'nwr["brand:wikidata"="Q715583"];'
+    . ');'
+    . 'out center;';
+
 return [
     'na-food-banks' => [
         'label'        => 'North America Food Banks, Pantries & Soup Kitchens',
@@ -49,6 +67,36 @@ return [
         'timeout'      => 360,
         'lazy_refresh' => false,
         'default_view' => ['lat' => 20.0, 'lng' => 10.0, 'altitude' => 2.4],
+        'group_property' => null,
+    ],
+    'global-walmart' => [
+        'label'        => 'Walmart Stores (Global)',
+        'description'  => 'Walmart store locations worldwide from OpenStreetMap (brand=Walmart or brand:wikidata=Q483551).',
+        'subtitle'     => 'Walmart stores worldwide',
+        'url'          => 'https://overpass-api.de/api/interpreter?data=' . rawurlencode($walmart_query),
+        'format'       => 'geojson',
+        'ttl_days'     => 30,
+        'attribution'  => '© OpenStreetMap contributors (ODbL)',
+        'source_url'   => 'https://www.openstreetmap.org/about',
+        'transform'    => 'osm_to_geojson',
+        'timeout'      => 360,
+        'lazy_refresh' => false,
+        'default_view' => ['lat' => 30.0, 'lng' => -90.0, 'altitude' => 2.1],
+        'group_property' => null,
+    ],
+    'global-costco' => [
+        'label'        => 'Costco Warehouses (Global)',
+        'description'  => 'Costco warehouse locations worldwide from OpenStreetMap (brand=Costco or brand:wikidata=Q715583).',
+        'subtitle'     => 'Costco warehouses worldwide',
+        'url'          => 'https://overpass-api.de/api/interpreter?data=' . rawurlencode($costco_query),
+        'format'       => 'geojson',
+        'ttl_days'     => 30,
+        'attribution'  => '© OpenStreetMap contributors (ODbL)',
+        'source_url'   => 'https://www.openstreetmap.org/about',
+        'transform'    => 'osm_to_geojson',
+        'timeout'      => 360,
+        'lazy_refresh' => false,
+        'default_view' => ['lat' => 35.0, 'lng' => -100.0, 'altitude' => 2.2],
         'group_property' => null,
     ],
 ];
