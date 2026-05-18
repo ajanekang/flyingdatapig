@@ -36,12 +36,19 @@
     // dataset and camera position so the live URL is shareable. Read once on
     // boot to honor any view encoded in a shared link, then written back on
     // dataset switches and (debounced) camera changes.
+    // altitude is in units of globe radius — anything at/below the surface
+    // points the camera at the center of the sphere (nothing to look at).
+    // Treat that as a degenerate value both on read (broken share links)
+    // and on write (Globe.gl can transiently report {0,0,0} before its
+    // initial pointOfView resolves).
+    const MIN_VALID_ALT = 0.1;
     function parseUrlView() {
         const p = new URLSearchParams(window.location.search);
         const lat = Number(p.get('lat'));
         const lng = Number(p.get('lng'));
         const alt = Number(p.get('alt'));
         if (![lat, lng, alt].every(Number.isFinite)) return null;
+        if (alt < MIN_VALID_ALT) return null;
         return { lat, lng, altitude: alt };
     }
     function writeUrlState() {
@@ -49,10 +56,20 @@
         const p = new URLSearchParams(window.location.search);
         p.set('source', currentSourceId);
         const pov = (typeof world !== 'undefined' && world.pointOfView) ? world.pointOfView() : null;
-        if (pov && Number.isFinite(pov.lat) && Number.isFinite(pov.lng) && Number.isFinite(pov.altitude)) {
+        const validPov = pov
+            && Number.isFinite(pov.lat) && Number.isFinite(pov.lng) && Number.isFinite(pov.altitude)
+            && pov.altitude >= MIN_VALID_ALT;
+        if (validPov) {
             p.set('lat', pov.lat.toFixed(4));
             p.set('lng', pov.lng.toFixed(4));
             p.set('alt', pov.altitude.toFixed(2));
+        } else {
+            // Avoid baking a junk view (Globe.gl's pre-init {0,0,0}) into
+            // the URL bar — and clean up any stale entries from a prior
+            // broken share link the user just opened.
+            p.delete('lat');
+            p.delete('lng');
+            p.delete('alt');
         }
         history.replaceState(null, '', window.location.pathname + '?' + p.toString());
     }
