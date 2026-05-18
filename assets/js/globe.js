@@ -117,6 +117,104 @@
         return p.__hay;
     }
 
+    // Country aliases — when a feature is geo-assigned to a country (English
+    // name from the world-atlas polygons), we append these synonyms to its
+    // haystack so queries like "korea", "kr", or "usa" hit features that
+    // never had a country tag set on OSM in the first place. Keys are the
+    // english names exactly as world-atlas uses them.
+    const COUNTRY_ALIASES = {
+        'South Korea':              'korea kr kor 대한민국 republic of korea south-korea',
+        'North Korea':              'korea kp prk 조선 democratic peoples republic of korea north-korea',
+        'United States of America': 'usa us united states america united-states',
+        'United Kingdom':           'uk gb gbr great britain britain england scotland wales',
+        'Russia':                   'ru rus russian federation',
+        'China':                    'cn chn 中国 prc peoples republic of china',
+        'Japan':                    'jp jpn 日本 nippon',
+        'Germany':                  'de deu deutschland',
+        'France':                   'fr fra',
+        'Italy':                    'it ita italia',
+        'Spain':                    'es esp espana españa',
+        'Brazil':                   'br bra brasil',
+        'India':                    'in ind bharat',
+        'Mexico':                   'mx mex',
+        'Canada':                   'ca can',
+        'Australia':                'au aus',
+        'Netherlands':              'nl nld holland',
+        'Switzerland':              'ch che',
+        'Sweden':                   'se swe',
+        'Norway':                   'no nor',
+        'Denmark':                  'dk dnk',
+        'Finland':                  'fi fin',
+        'Poland':                   'pl pol polska',
+        'Vietnam':                  'vn vnm việt nam viet nam',
+        'Taiwan':                   'tw twn 臺灣 台灣 republic of china roc',
+        'Thailand':                 'th tha ประเทศไทย',
+        'Indonesia':                'id idn',
+        'Philippines':              'ph phl',
+        'Argentina':                'ar arg',
+        'South Africa':             'za zaf rsa',
+        'Egypt':                    'eg egy',
+        'Turkey':                   'tr tur türkiye turkiye',
+        'Saudi Arabia':             'sa sau',
+        'United Arab Emirates':     'ae are uae emirates',
+    };
+
+    // Country polygons get attached to features at load time so search
+    // queries can hit the country even when the upstream OSM record has no
+    // addr:country tag.
+    let countryInfos = [];     // [{name, aliases, bbox, geometry}]
+    let countryInfosReady = false;
+
+    function pointInRing(lng, lat, ring) {
+        let inside = false;
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+            const xi = ring[i][0], yi = ring[i][1];
+            const xj = ring[j][0], yj = ring[j][1];
+            const hit = ((yi > lat) !== (yj > lat))
+                && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+            if (hit) inside = !inside;
+        }
+        return inside;
+    }
+    function pointInGeometry(lng, lat, geom) {
+        if (!geom) return false;
+        const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
+        for (const poly of polys) {
+            if (!poly || !poly.length) continue;
+            if (!pointInRing(lng, lat, poly[0])) continue;
+            // Check holes — if the point falls in a hole, it's outside.
+            let inHole = false;
+            for (let h = 1; h < poly.length; h++) {
+                if (pointInRing(lng, lat, poly[h])) { inHole = true; break; }
+            }
+            if (!inHole) return true;
+        }
+        return false;
+    }
+    function lookupCountry(lng, lat) {
+        for (const c of countryInfos) {
+            const bb = c.bbox;
+            if (lng < bb.minLng || lng > bb.maxLng || lat < bb.minLat || lat > bb.maxLat) continue;
+            if (pointInGeometry(lng, lat, c.geometry)) return c;
+        }
+        return null;
+    }
+    function tagFeatureCountries(features) {
+        if (!countryInfosReady || !features || !features.length) return;
+        for (const f of features) {
+            if (!f || f.__countryTagged) continue;
+            const coords = f.geometry && f.geometry.coordinates;
+            if (!coords || typeof coords[0] !== 'number') continue;
+            const c = lookupCountry(coords[0], coords[1]);
+            if (c) {
+                f.properties.__country = c.name;
+                if (c.aliases) f.properties.__country_aliases = c.aliases;
+                delete f.properties.__hay; // rebuild haystack with country tag
+            }
+            f.__countryTagged = true;
+        }
+    }
+
     let allFeatures = [];
     let visibleTypes = new Set();
     let searchQuery = '';
@@ -263,6 +361,22 @@
                 );
                 countryFeatures = features.map((f) => ({ ...f, _layer: 'country' }));
                 applyPolygons();
+
+                // Build the country-info lookup used to tag features with
+                // their geo-derived country (so search queries like "korea"
+                // can hit features that lack addr:country).
+                countryInfos = features.map((f) => {
+                    const name = (f.properties && f.properties.name) || '';
+                    const aliases = ((COUNTRY_ALIASES[name] || '') + ' ' + name).toLowerCase();
+                    return { name, aliases, bbox: bboxOf(f), geometry: f.geometry };
+                });
+                countryInfosReady = true;
+                // Retroactively tag any features already loaded before the
+                // country polygons resolved.
+                if (allFeatures.length) {
+                    tagFeatureCountries(allFeatures);
+                    applyFilter();
+                }
 
                 // Label only the ~40 largest countries (by bbox area) so the
                 // world view doesn't draw 170 separate text meshes per frame.
@@ -415,6 +529,7 @@
                         typeof f.geometry.coordinates[0] === 'number' &&
                         typeof f.geometry.coordinates[1] === 'number'
                 );
+                tagFeatureCountries(allFeatures);
                 visibleTypes = collectTypes(allFeatures);
                 renderLegend();
                 applyFilter();
