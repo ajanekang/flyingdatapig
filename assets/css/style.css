@@ -515,20 +515,22 @@ button { font: inherit; cursor: pointer; }
 }
 
 .globe-tooltip-rich {
+    display: block;
     max-width: 340px;
     padding: 0.85rem 1rem;
     background: rgba(15, 15, 35, 0.97);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 0.5rem;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-    line-height: 1.5;
+    line-height: 1.45;
+    color: #fff;
+    font-size: 0.8rem;
 }
 
 .globe-tooltip-rich .tt-name {
     font-weight: 600;
     font-size: 0.95rem;
-    margin-bottom: 0.5rem;
-    color: #fff;
+    margin-bottom: 0.4rem;
 }
 
 .globe-tooltip-rich .tt-badge {
@@ -541,27 +543,27 @@ button { font: inherit; cursor: pointer; }
     letter-spacing: 0.02em;
 }
 
-.globe-tooltip-rich .tt-grid {
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    gap: 0.25rem 0.6rem;
-    margin: 0;
-    font-size: 0.75rem;
+.globe-tooltip-rich .tt-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+    align-items: flex-start;
+    line-height: 1.4;
 }
 
-.globe-tooltip-rich .tt-grid dt {
-    color: rgba(255, 255, 255, 0.45);
+.globe-tooltip-rich .tt-key {
+    color: rgba(255, 255, 255, 0.5);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    font-size: 0.65rem;
-    align-self: start;
+    font-size: 0.62rem;
+    min-width: 4.5rem;
     padding-top: 0.1rem;
 }
 
-.globe-tooltip-rich .tt-grid dd {
-    margin: 0;
-    color: rgba(255, 255, 255, 0.9);
+.globe-tooltip-rich .tt-val {
+    color: rgba(255, 255, 255, 0.92);
     word-break: break-word;
+    flex: 1;
 }
 
 .globe-error {

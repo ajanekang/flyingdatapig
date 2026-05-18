@@ -83,12 +83,12 @@
         .labelColor((d) => d.color)
         .labelAltitude(0.01)
         .labelResolution(2)
-        // Tiny but non-zero altitude: visually reads as a flat disc on the
-        // globe surface, but the cylinder still has enough thickness for
-        // Globe.gl's raycaster to register hover and click events. With
-        // altitude exactly 0 the geometry is degenerate and the picker
-        // silently fails.
-        .pointAltitude(0.002)
+        // Non-zero altitude so the cylinder has enough thickness for
+        // Globe.gl's raycaster to reliably register hover and click events.
+        // 0.002 was the bare minimum and seems to fail intermittently;
+        // 0.01 (1% of globe radius) still reads as basically flat from a
+        // distance but raycasting is rock-solid.
+        .pointAltitude(0.01)
         .pointRadius(radiusForAltitude(1.9))
         .pointColor((d) => {
             const p = d.properties || {};
@@ -106,22 +106,30 @@
             const typeColor = colorForType(typeRaw);
             const address = formatAddress(p);
 
-            const rows = [
-                address           ? ['Address',  address]            : null,
-                p.opening_hours   ? ['Hours',    p.opening_hours]    : null,
-                p.phone           ? ['Phone',    p.phone]            : null,
-                p.website         ? ['Website',  p.website]          : null,
-                p.email           ? ['Email',    p.email]            : null,
-                p.operator        ? ['Operator', p.operator]         : null,
-                p.wheelchair      ? ['Access',   p.wheelchair]       : null,
-            ].filter(Boolean);
+            const fields = [
+                ['Address',  address],
+                ['Hours',    p.opening_hours],
+                ['Phone',    p.phone],
+                ['Website',  p.website],
+                ['Email',    p.email],
+                ['Operator', p.operator],
+                ['Access',   p.wheelchair],
+            ];
 
-            return `
-                <div class="globe-tooltip globe-tooltip-rich">
-                    <div class="tt-name">${escapeHtml(name)}</div>
-                    ${typeLabel ? `<div class="tt-badge" style="background:${typeColor};color:${onColor(typeColor)}">${escapeHtml(typeLabel)}</div>` : ''}
-                    ${rows.length ? `<dl class="tt-grid">${rows.map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('')}</dl>` : ''}
-                </div>`;
+            // Flat single-line HTML string — some Globe.gl versions don't
+            // play nicely with leading whitespace or block-level children
+            // in the tooltip container.
+            let html = '<div class="globe-tooltip globe-tooltip-rich">';
+            html += '<div class="tt-name">' + escapeHtml(name) + '</div>';
+            if (typeLabel) {
+                html += '<div class="tt-badge" style="background:' + typeColor + ';color:' + onColor(typeColor) + '">' + escapeHtml(typeLabel) + '</div>';
+            }
+            for (const [k, v] of fields) {
+                if (v == null || v === '') continue;
+                html += '<div class="tt-row"><span class="tt-key">' + escapeHtml(k) + '</span><span class="tt-val">' + escapeHtml(v) + '</span></div>';
+            }
+            html += '</div>';
+            return html;
         })
         .onPointClick((d) => {
             selectedFeature = d;
