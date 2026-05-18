@@ -55,6 +55,21 @@
         return colorForType((prop && p[prop]) || p.amenity);
     }
 
+    // Lowercased concatenation of every string property on a feature.
+    // Lets the search box match against country, state/province, city,
+    // suburb, postcode, brand, operator, etc. without us having to
+    // enumerate each OSM tag explicitly. Result is cached per feature.
+    function buildHaystack(p) {
+        if (p.__hay) return p.__hay;
+        let out = '';
+        for (const v of Object.values(p)) {
+            if (typeof v === 'string') out += v + ' ';
+            else if (typeof v === 'number') out += v + ' ';
+        }
+        p.__hay = out.toLowerCase();
+        return p.__hay;
+    }
+
     let allFeatures = [];
     let visibleTypes = new Set();
     let searchQuery = '';
@@ -301,9 +316,13 @@
     }
 
     if (searchEl) {
+        let searchDebounce = null;
         searchEl.addEventListener('input', () => {
-            searchQuery = searchEl.value.trim().toLowerCase();
-            applyFilter();
+            clearTimeout(searchDebounce);
+            searchDebounce = setTimeout(() => {
+                searchQuery = searchEl.value.trim().toLowerCase();
+                applyFilter();
+            }, 150);
         });
     }
 
@@ -376,15 +395,8 @@
                 const t = f.properties[groupProp];
                 if (t && !visibleTypes.has(t)) return false;
             }
-            if (searchQuery) {
-                const p = f.properties;
-                const haystack = (
-                    (p.name || '') + ' ' +
-                    (p['name:en'] || '') + ' ' +
-                    (p['addr:city'] || '') + ' ' +
-                    (p['addr:state'] || '')
-                ).toLowerCase();
-                if (!haystack.includes(searchQuery)) return false;
+            if (searchQuery && !buildHaystack(f.properties).includes(searchQuery)) {
+                return false;
             }
             return true;
         });
