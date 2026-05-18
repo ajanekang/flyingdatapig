@@ -7,10 +7,66 @@ PORT=38005
 CONTAINER_NAME="flyingdatapig-debug"
 URL="http://127.0.0.1:${PORT}"
 
-if ! command -v docker >/dev/null 2>&1; then
-    echo "docker is required but not installed." >&2
-    exit 1
-fi
+# Install Docker if it isn't on PATH. macOS uses Homebrew + Docker Desktop;
+# Linux uses the official get.docker.com script (needs sudo). On macOS we
+# also launch Docker Desktop and wait for the daemon to be reachable so the
+# subsequent docker pull/run won't fail with "cannot connect".
+ensure_docker() {
+    if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+        return 0
+    fi
+
+    local os
+    os=$(uname -s)
+
+    if ! command -v docker >/dev/null 2>&1; then
+        echo "Docker not found. Installing ..." >&2
+        case "$os" in
+            Darwin)
+                if ! command -v brew >/dev/null 2>&1; then
+                    echo "Homebrew is required to auto-install Docker on macOS." >&2
+                    echo "Install Homebrew from https://brew.sh and re-run, or install Docker Desktop manually." >&2
+                    exit 1
+                fi
+                brew install --cask docker
+                ;;
+            Linux)
+                if ! command -v curl >/dev/null 2>&1; then
+                    echo "curl is required to auto-install Docker on Linux." >&2
+                    exit 1
+                fi
+                curl -fsSL https://get.docker.com | sh
+                ;;
+            *)
+                echo "Unsupported OS '$os'. Install Docker manually." >&2
+                exit 1
+                ;;
+        esac
+    fi
+
+    # macOS: launch Docker Desktop and wait for the daemon.
+    if [ "$os" = "Darwin" ] && ! docker info >/dev/null 2>&1; then
+        echo "Starting Docker Desktop ..." >&2
+        open -a Docker >/dev/null 2>&1 || true
+        local i
+        for i in $(seq 1 60); do
+            if docker info >/dev/null 2>&1; then
+                echo "Docker daemon is ready." >&2
+                return 0
+            fi
+            sleep 2
+        done
+        echo "Docker daemon did not come up. Start Docker Desktop manually and retry." >&2
+        exit 1
+    fi
+
+    if ! docker info >/dev/null 2>&1; then
+        echo "Docker is installed but the daemon is unreachable. Start it and retry." >&2
+        exit 1
+    fi
+}
+
+ensure_docker
 
 # Free up the port: stop our own container if running, any other docker
 # container publishing the port, and any host process listening on it.
