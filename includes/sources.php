@@ -116,6 +116,16 @@ $convenience_query = '[out:json][timeout:600];'
     . 'nwr["shop"="convenience"]["brand"];'
     . 'out center;';
 
+// Tesla Supercharger stations worldwide. Filters by the Supercharger-
+// specific socket tags so this is purely high-speed Superchargers, not the
+// slower Tesla Destination Chargers (which use J1772/Type 2 sockets).
+$tesla_sc_query = '[out:json][timeout:300];'
+    . '('
+    . 'nwr["amenity"="charging_station"]["socket:tesla_supercharger"];'
+    . 'nwr["amenity"="charging_station"]["socket:tesla_supercharger_ccs"];'
+    . ');'
+    . 'out center;';
+
 return [
     'global-costco' => [
         'label'        => 'Costco Warehouses (Global)',
@@ -281,6 +291,21 @@ return [
         'timeout'      => 360,
         'lazy_refresh' => false,
         'default_view' => ['lat' => 38.0, 'lng' => -97.0, 'altitude' => 1.9],
+        'group_property' => null,
+    ],
+    'global-tesla-superchargers' => [
+        'label'        => 'Tesla Superchargers (Global)',
+        'description'  => 'Tesla Supercharger stations worldwide from OpenStreetMap (charging_station with socket:tesla_supercharger or socket:tesla_supercharger_ccs). Excludes the slower Tesla Destination Chargers.',
+        'subtitle'     => 'Tesla Supercharger stations worldwide',
+        'url'          => 'https://overpass-api.de/api/interpreter?data=' . rawurlencode($tesla_sc_query),
+        'format'       => 'geojson',
+        'ttl_days'     => 30,
+        'attribution'  => '© OpenStreetMap contributors (ODbL)',
+        'source_url'   => 'https://www.openstreetmap.org/about',
+        'transform'    => 'osm_to_geojson',
+        'timeout'      => 360,
+        'lazy_refresh' => false,
+        'default_view' => ['lat' => 25.0, 'lng' => 0.0, 'altitude' => 2.4],
         'group_property' => null,
     ],
     'global-trader-joes' => [

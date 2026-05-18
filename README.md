@@ -19,6 +19,7 @@ A single-page PHP site that plots cached OpenStreetMap-derived datasets onto a 3
 - North America Food Banks, Pantries & Soup Kitchens
 - Starbucks Cafes (Global)
 - Target Stores
+- Tesla Superchargers (Global)
 - Trader Joe's Stores
 - Walmart Stores (Global)
 
