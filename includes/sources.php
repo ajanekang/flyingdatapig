@@ -38,6 +38,32 @@ $costco_query = '[out:json][timeout:300];'
     . ');'
     . 'out center;';
 
+// Starbucks cafes worldwide (Q37158). Tens of thousands of stores
+// globally; we accept the larger payload for completeness.
+$starbucks_query = '[out:json][timeout:300];'
+    . '('
+    . 'nwr["brand"="Starbucks"];'
+    . 'nwr["brand:wikidata"="Q37158"];'
+    . ');'
+    . 'out center;';
+
+// Trader Joe's stores (Q688825). US-only chain; small dataset.
+$traderjoes_query = '[out:json][timeout:300];'
+    . '('
+    . 'nwr["brand"="Trader Joe\'s"];'
+    . 'nwr["brand:wikidata"="Q688825"];'
+    . ');'
+    . 'out center;';
+
+// McDonald's restaurants worldwide (Q38076). Largest of the bunch —
+// expect ~30-40k features.
+$mcdonalds_query = '[out:json][timeout:300];'
+    . '('
+    . 'nwr["brand"="McDonald\'s"];'
+    . 'nwr["brand:wikidata"="Q38076"];'
+    . ');'
+    . 'out center;';
+
 return [
     'na-food-banks' => [
         'label'        => 'North America Food Banks, Pantries & Soup Kitchens',
@@ -97,6 +123,51 @@ return [
         'timeout'      => 360,
         'lazy_refresh' => false,
         'default_view' => ['lat' => 35.0, 'lng' => -100.0, 'altitude' => 2.2],
+        'group_property' => null,
+    ],
+    'global-starbucks' => [
+        'label'        => 'Starbucks Cafes (Global)',
+        'description'  => 'Starbucks cafe locations worldwide from OpenStreetMap (brand=Starbucks or brand:wikidata=Q37158).',
+        'subtitle'     => 'Starbucks cafes worldwide',
+        'url'          => 'https://overpass-api.de/api/interpreter?data=' . rawurlencode($starbucks_query),
+        'format'       => 'geojson',
+        'ttl_days'     => 30,
+        'attribution'  => '© OpenStreetMap contributors (ODbL)',
+        'source_url'   => 'https://www.openstreetmap.org/about',
+        'transform'    => 'osm_to_geojson',
+        'timeout'      => 480,
+        'lazy_refresh' => false,
+        'default_view' => ['lat' => 25.0, 'lng' => 0.0, 'altitude' => 2.4],
+        'group_property' => null,
+    ],
+    'global-trader-joes' => [
+        'label'        => "Trader Joe's Stores",
+        'description'  => "Trader Joe's grocery store locations from OpenStreetMap (brand=Trader Joe's or brand:wikidata=Q688825). US-only chain.",
+        'subtitle'     => "Trader Joe's stores",
+        'url'          => 'https://overpass-api.de/api/interpreter?data=' . rawurlencode($traderjoes_query),
+        'format'       => 'geojson',
+        'ttl_days'     => 30,
+        'attribution'  => '© OpenStreetMap contributors (ODbL)',
+        'source_url'   => 'https://www.openstreetmap.org/about',
+        'transform'    => 'osm_to_geojson',
+        'timeout'      => 240,
+        'lazy_refresh' => false,
+        'default_view' => ['lat' => 38.0, 'lng' => -97.0, 'altitude' => 1.9],
+        'group_property' => null,
+    ],
+    'global-mcdonalds' => [
+        'label'        => "McDonald's Restaurants (Global)",
+        'description'  => "McDonald's restaurant locations worldwide from OpenStreetMap (brand=McDonald's or brand:wikidata=Q38076).",
+        'subtitle'     => "McDonald's restaurants worldwide",
+        'url'          => 'https://overpass-api.de/api/interpreter?data=' . rawurlencode($mcdonalds_query),
+        'format'       => 'geojson',
+        'ttl_days'     => 30,
+        'attribution'  => '© OpenStreetMap contributors (ODbL)',
+        'source_url'   => 'https://www.openstreetmap.org/about',
+        'transform'    => 'osm_to_geojson',
+        'timeout'      => 600,
+        'lazy_refresh' => false,
+        'default_view' => ['lat' => 25.0, 'lng' => 0.0, 'altitude' => 2.4],
         'group_property' => null,
     ],
 ];
