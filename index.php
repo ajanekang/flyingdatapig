@@ -107,7 +107,7 @@ foreach ($sources as $id => $s) {
                     <label class="control-label" for="dataset">Dataset</label>
                     <select id="dataset" class="select-input">
                         <?php foreach ($sources as $id => $src): ?>
-                            <option value="<?= htmlspecialchars($id) ?>"><?= htmlspecialchars($src['label']) ?></option>
+                            <option value="<?= htmlspecialchars($id) ?>"<?= $id === 'na-food-banks' ? ' selected' : '' ?>><?= htmlspecialchars($src['label']) ?></option>
                         <?php endforeach; ?>
                     </select>
                     <input

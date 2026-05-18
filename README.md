@@ -82,6 +82,14 @@ The lazy refresh in `api/data.php` is a backstop — cron is preferred so the fi
 - **Add or change a team member:** edit `includes/team.php`.
 - **Swap visualizations (hex bins, choropleth, arcs):** edit `assets/js/globe.js`. The page just provides an empty `#globe` div.
 
+## Contributors
+
+- **Jane Kang** — Founder (Northwood High School)
+- **Chun Kang** — Advisor (Software Industry Expert)
+- **Johnny Kang** — Technical Architect & Advisor (University of Illinois Urbana-Champaign)
+
+The canonical list lives in `includes/team.php` and drives the site's Team panel — edit it there, not here.
+
 ## License
 
 Map data © OpenStreetMap contributors, licensed under the [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/).
