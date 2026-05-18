@@ -32,7 +32,6 @@
         if (![lat, lng, alt].every(Number.isFinite)) return null;
         return { lat, lng, altitude: alt };
     }
-    let urlWriteTimer = null;
     function writeUrlState() {
         if (!currentSourceId) return;
         const p = new URLSearchParams(window.location.search);
@@ -45,9 +44,15 @@
         }
         history.replaceState(null, '', window.location.pathname + '?' + p.toString());
     }
+    // Coalesce to one write per animation frame so the URL tracks the camera
+    // in real time (~60Hz) without flooding history.replaceState.
+    let urlWriteRaf = null;
     function scheduleUrlWrite() {
-        clearTimeout(urlWriteTimer);
-        urlWriteTimer = setTimeout(writeUrlState, 250);
+        if (urlWriteRaf !== null) return;
+        urlWriteRaf = requestAnimationFrame(() => {
+            urlWriteRaf = null;
+            writeUrlState();
+        });
     }
 
     function buildTooltipHTML(d) {
@@ -422,29 +427,32 @@
     const initialId = (datasetEl && datasetEl.value) || Object.keys(SOURCES)[0];
     if (initialId) loadSource(initialId);
 
-    // Honor a view explicitly encoded in the URL — that's a deliberate share
-    // link, so it wins over both the dataset's default_view and geo-IP.
+    // Honor a view explicitly encoded in the URL on first paint — that's a
+    // deliberate share link and should win over the dataset's default_view.
     const urlView = parseUrlView();
     if (urlView) {
         world.pointOfView(urlView, 0);
-    } else {
-        // Otherwise resolve the viewer's approximate location via geo-IP and
-        // re-center. Once cached, homeView() consults viewerLocation, so every
-        // subsequent dataset switch re-centers on the viewer (with the
-        // dataset's own altitude). ipwho.is is keyless, HTTPS, and CORS-open.
-        // Silent fallback to dataset default_view on any failure.
-        fetch('https://ipwho.is/')
-            .then((r) => (r.ok ? r.json() : null))
-            .then((info) => {
-                if (!info || info.success === false) return;
-                const lat = Number(info.latitude);
-                const lng = Number(info.longitude);
-                if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-                viewerLocation = { lat, lng };
-                world.pointOfView(homeView(), 1500);
-            })
-            .catch(() => {});
     }
+
+    // Always resolve the viewer's approximate location via geo-IP in the
+    // background. Once cached in viewerLocation, every subsequent dataset
+    // switch re-centers on the viewer (homeView() consults it). On first
+    // paint we only auto-pan when no explicit URL view was given — otherwise
+    // we'd yank the camera away from the shared link the user just opened.
+    // ipwho.is is keyless, HTTPS, and CORS-open. Silent fallback on failure.
+    fetch('https://ipwho.is/')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((info) => {
+            if (!info || info.success === false) return;
+            const lat = Number(info.latitude);
+            const lng = Number(info.longitude);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+            viewerLocation = { lat, lng };
+            if (!urlView) {
+                world.pointOfView(homeView(), 1500);
+            }
+        })
+        .catch(() => {});
 
     window.addEventListener('resize', () => {
         world.width(container.clientWidth).height(container.clientHeight);
