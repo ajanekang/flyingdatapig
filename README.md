@@ -13,9 +13,11 @@ A single-page PHP site that plots cached OpenStreetMap-derived datasets onto a 3
 - Global Airports
 - Global Power Plants (filterable by source: solar, wind, hydro, nuclear, coal, gas, biomass, etc.)
 - Global Universities
+- H Mart Stores
 - McDonald's Restaurants (Global)
 - North America Food Banks, Pantries & Soup Kitchens
 - Starbucks Cafes (Global)
+- Target Stores
 - Trader Joe's Stores
 - Walmart Stores (Global)
 

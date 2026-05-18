@@ -90,6 +90,23 @@ $power_plants_query = '[out:json][timeout:300];'
     . 'nwr["power"="plant"];'
     . 'out center;';
 
+// H Mart (Q5635873). Korean-American supermarket chain — mostly US and
+// Canada, a few UK locations. ~100 stores last probe.
+$hmart_query = '[out:json][timeout:300];'
+    . '('
+    . 'nwr["brand"="H Mart"];'
+    . 'nwr["brand:wikidata"="Q5635873"];'
+    . ');'
+    . 'out center;';
+
+// Target Corporation (Q1046951). US-only big-box retailer, ~1,950 stores.
+$target_query = '[out:json][timeout:300];'
+    . '('
+    . 'nwr["brand"="Target"];'
+    . 'nwr["brand:wikidata"="Q1046951"];'
+    . ');'
+    . 'out center;';
+
 return [
     'global-costco' => [
         'label'        => 'Costco Warehouses (Global)',
@@ -166,6 +183,21 @@ return [
         'default_view' => ['lat' => 20.0, 'lng' => 10.0, 'altitude' => 2.4],
         'group_property' => null,
     ],
+    'global-hmart' => [
+        'label'        => 'H Mart Stores',
+        'description'  => 'H Mart Korean-American supermarket locations from OpenStreetMap (brand=H Mart or brand:wikidata=Q5635873). US and Canada with a handful in the UK.',
+        'subtitle'     => 'H Mart stores',
+        'url'          => 'https://overpass-api.de/api/interpreter?data=' . rawurlencode($hmart_query),
+        'format'       => 'geojson',
+        'ttl_days'     => 30,
+        'attribution'  => '© OpenStreetMap contributors (ODbL)',
+        'source_url'   => 'https://www.openstreetmap.org/about',
+        'transform'    => 'osm_to_geojson',
+        'timeout'      => 240,
+        'lazy_refresh' => false,
+        'default_view' => ['lat' => 38.0, 'lng' => -97.0, 'altitude' => 1.9],
+        'group_property' => null,
+    ],
     'global-mcdonalds' => [
         'label'        => "McDonald's Restaurants (Global)",
         'description'  => "McDonald's restaurant locations worldwide from OpenStreetMap (brand=McDonald's or brand:wikidata=Q38076).",
@@ -209,6 +241,21 @@ return [
         'timeout'      => 480,
         'lazy_refresh' => false,
         'default_view' => ['lat' => 25.0, 'lng' => 0.0, 'altitude' => 2.4],
+        'group_property' => null,
+    ],
+    'global-target' => [
+        'label'        => 'Target Stores',
+        'description'  => 'Target store locations from OpenStreetMap (brand=Target or brand:wikidata=Q1046951). US-only big-box chain, ~1,950 stores.',
+        'subtitle'     => 'Target stores',
+        'url'          => 'https://overpass-api.de/api/interpreter?data=' . rawurlencode($target_query),
+        'format'       => 'geojson',
+        'ttl_days'     => 30,
+        'attribution'  => '© OpenStreetMap contributors (ODbL)',
+        'source_url'   => 'https://www.openstreetmap.org/about',
+        'transform'    => 'osm_to_geojson',
+        'timeout'      => 360,
+        'lazy_refresh' => false,
+        'default_view' => ['lat' => 38.0, 'lng' => -97.0, 'altitude' => 1.9],
         'group_property' => null,
     ],
     'global-trader-joes' => [
