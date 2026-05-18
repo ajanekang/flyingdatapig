@@ -52,20 +52,21 @@ foreach ($sources as $id => $s) {
             background: #05060f !important;
             flex: none !important;
             min-height: 0 !important;
+            overflow: hidden !important;
         }
-        #globe { width: 100%; height: 100%; }
+        #globe { width: 100%; height: 100%; overflow: hidden; }
         .side-panel {
             position: fixed !important;
             top: 50vh !important;
             left: 0 !important;
             right: 0 !important;
             bottom: 0 !important;
-            background: rgba(15, 15, 35, 0.96) !important;
+            background: #0f0f23 !important;
             border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
             overflow-y: auto !important;
             display: flex !important;
             flex-direction: column !important;
-            z-index: 10 !important;
+            z-index: 100 !important;
         }
         @media (min-width: 768px) {
             .globe-area { right: 340px !important; bottom: 0 !important; }
